@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from backend.app.core.database import create_pool, close_pool
-from backend.app.routers import auth_router, wallets_router, categories_router, transactions_router, analytics_router, reports_router
+from backend.app.routers import auth_router, wallets_router, categories_router, transactions_router, analytics_router, reports_router, admin_router
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ app.include_router(categories_router)
 app.include_router(transactions_router)
 app.include_router(analytics_router)
 app.include_router(reports_router)
+app.include_router(admin_router)
 
 
 @app.get("/")
