@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import asyncpg
 
 from backend.app.core.database import create_pool, close_pool
+from backend.app.core.config import settings
 from backend.app.core.logging_config import logger
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.core.exceptions import (
@@ -53,10 +54,11 @@ All endpoints (except `/auth/*`) require a valid JWT token in the `Authorization
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,  # Required for cookies
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["X-Request-ID"],
 )
 
 # Exception Handlers
