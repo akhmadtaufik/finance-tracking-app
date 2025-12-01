@@ -3,10 +3,16 @@ import asyncpg
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from passlib.context import CryptContext
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@finance.com")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "Admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 DEFAULT_CATEGORIES = [
     # INCOME categories
@@ -60,6 +66,29 @@ async def init_database():
             print(f"Seeded {len(DEFAULT_CATEGORIES)} default categories!")
         else:
             print(f"Categories already exist ({count} global categories found). Skipping seed.")
+        
+        # Check if superuser exists
+        superuser = await conn.fetchrow(
+            "SELECT id FROM users WHERE is_superuser = TRUE"
+        )
+        
+        if not superuser:
+            if not ADMIN_PASSWORD:
+                print("WARNING: ADMIN_PASSWORD not set in .env. Skipping superuser creation.")
+            else:
+                print("Creating superuser account...")
+                hashed_password = pwd_context.hash(ADMIN_PASSWORD)
+                await conn.execute(
+                    """
+                    INSERT INTO users (email, username, password_hash, is_superuser, is_active)
+                    VALUES ($1, $2, $3, TRUE, TRUE)
+                    ON CONFLICT (email) DO UPDATE SET is_superuser = TRUE
+                    """,
+                    ADMIN_EMAIL, ADMIN_USERNAME, hashed_password
+                )
+                print(f"Superuser created: {ADMIN_EMAIL}")
+        else:
+            print("Superuser already exists. Skipping.")
         
         print("Database initialization complete!")
         
