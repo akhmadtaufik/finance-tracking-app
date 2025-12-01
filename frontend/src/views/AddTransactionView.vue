@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '../stores/finance'
+import CurrencyInput from '../components/CurrencyInput.vue'
 
 const router = useRouter()
 const financeStore = useFinanceStore()
@@ -9,7 +10,7 @@ const financeStore = useFinanceStore()
 const type = ref('EXPENSE')
 const walletId = ref(null)
 const categoryId = ref(null)
-const amount = ref('')
+const amount = ref(0)
 const description = ref('')
 const transactionDate = ref(new Date().toISOString().split('T')[0])
 const error = ref('')
@@ -105,16 +106,8 @@ const handleSubmit = async () => {
 
         <!-- Amount -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Amount (IDR)</label>
-          <input
-            v-model="amount"
-            type="number"
-            min="0"
-            step="1000"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="0"
-          />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+          <CurrencyInput v-model="amount" placeholder="0" />
         </div>
 
         <!-- Wallet -->
