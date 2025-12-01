@@ -3,11 +3,13 @@ import { ref, onMounted } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import api from '../api'
 import CurrencyInput from '../components/CurrencyInput.vue'
+import TransferModal from '../components/TransferModal.vue'
 
 const financeStore = useFinanceStore()
 
 const showModal = ref(false)
 const showDeleteModal = ref(false)
+const showTransferModal = ref(false)
 const walletToDelete = ref(null)
 const walletName = ref('')
 const initialBalance = ref(0)
@@ -138,18 +140,34 @@ const confirmDelete = async () => {
     deleteLoading.value = false
   }
 }
+
+const onTransferSuccess = async () => {
+  await financeStore.fetchWallets()
+}
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-2xl font-bold text-gray-800">Wallets</h1>
-      <button
-        @click="openModal"
-        class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700"
-      >
-        + Add Wallet
-      </button>
+      <div class="flex gap-3">
+        <button
+          v-if="financeStore.wallets.length >= 2"
+          @click="showTransferModal = true"
+          class="px-4 py-2 bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 flex items-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          Transfer
+        </button>
+        <button
+          @click="openModal"
+          class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700"
+        >
+          + Add Wallet
+        </button>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -293,5 +311,13 @@ const confirmDelete = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Transfer Modal -->
+    <TransferModal
+      :show="showTransferModal"
+      :wallets="financeStore.wallets"
+      @close="showTransferModal = false"
+      @success="onTransferSuccess"
+    />
   </div>
 </template>
