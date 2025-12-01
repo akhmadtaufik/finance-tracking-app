@@ -55,7 +55,7 @@ async def get_current_user(
         raise credentials_exception
     
     user = await conn.fetchrow(
-        "SELECT id, email, username, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, is_superuser, is_active, created_at FROM users WHERE id = $1",
         int(user_id)
     )
     
