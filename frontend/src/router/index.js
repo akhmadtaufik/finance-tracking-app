@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const routes = [
   {
@@ -48,6 +49,28 @@ const routes = [
     name: 'Report',
     component: () => import('../views/ReportView.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin',
+    component: () => import('../layouts/AdminLayout.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/AdminDashboard.vue')
+      },
+      {
+        path: 'users',
+        name: 'UserManagement',
+        component: () => import('../views/admin/UserManagement.vue')
+      },
+      {
+        path: 'categories',
+        name: 'CategoryMaster',
+        component: () => import('../views/admin/CategoryMaster.vue')
+      }
+    ]
   }
 ]
 
@@ -56,13 +79,23 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
   
   if (to.meta.requiresAuth && !token) {
     next('/login')
   } else if (!to.meta.requiresAuth && token && (to.name === 'Login' || to.name === 'Register')) {
     next('/')
+  } else if (to.meta.requiresAdmin) {
+    const authStore = useAuthStore()
+    if (!authStore.user) {
+      await authStore.fetchUser()
+    }
+    if (!authStore.user?.is_superuser) {
+      next('/')
+    } else {
+      next()
+    }
   } else {
     next()
   }
