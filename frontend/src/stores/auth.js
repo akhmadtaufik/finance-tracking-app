@@ -5,8 +5,10 @@ import api from '../api'
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
   const user = ref(null)
+  const sessions = ref([])
 
   const isAuthenticated = computed(() => !!token.value)
+  const isAdmin = computed(() => user.value?.is_superuser || false)
 
   async function login(email, password) {
     const formData = new URLSearchParams()
@@ -39,16 +41,55 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.get('/auth/me')
       user.value = response.data
     } catch (error) {
-      logout()
+      // Jika gagal fetch user, biarkan interceptor handle refresh
+      // Jangan langsung logout di sini
+      console.error('Failed to fetch user:', error)
     }
   }
 
-  function logout() {
-    token.value = null
-    user.value = null
-    localStorage.removeItem('token')
+  async function logout() {
+    try {
+      // Panggil endpoint logout untuk revoke refresh token
+      await api.post('/auth/logout')
+    } catch (error) {
+      // Tetap lanjut logout meskipun API gagal
+      console.error('Logout API error:', error)
+    } finally {
+      // Bersihkan state lokal
+      token.value = null
+      user.value = null
+      sessions.value = []
+      localStorage.removeItem('token')
+    }
   }
 
+  async function logoutAllDevices() {
+    try {
+      const response = await api.post('/auth/logout-all')
+      // Bersihkan state lokal
+      token.value = null
+      user.value = null
+      sessions.value = []
+      localStorage.removeItem('token')
+      return response.data
+    } catch (error) {
+      console.error('Logout all devices error:', error)
+      throw error
+    }
+  }
+
+  async function fetchSessions() {
+    try {
+      const response = await api.get('/auth/sessions')
+      sessions.value = response.data.sessions
+      return sessions.value
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error)
+      throw error
+    }
+  }
+
+  // Auto fetch user jika ada token tersimpan
   if (token.value) {
     fetchUser()
   }
@@ -56,10 +97,14 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     token,
     user,
+    sessions,
     isAuthenticated,
+    isAdmin,
     login,
     register,
     fetchUser,
-    logout
+    logout,
+    logoutAllDevices,
+    fetchSessions
   }
 })
