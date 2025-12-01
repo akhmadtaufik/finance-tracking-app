@@ -7,6 +7,7 @@ from typing import Optional
 class WalletCreate(BaseModel):
     name: str
     balance: Optional[Decimal] = Decimal("0.00")
+    icon: Optional[str] = "wallet"
 
 
 class WalletResponse(BaseModel):
@@ -14,4 +15,5 @@ class WalletResponse(BaseModel):
     user_id: int
     name: str
     balance: Decimal
+    icon: Optional[str] = "wallet"
     created_at: datetime
