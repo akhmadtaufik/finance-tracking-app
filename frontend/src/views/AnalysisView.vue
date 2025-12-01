@@ -67,7 +67,11 @@ const periodLabel = computed(() => {
 })
 
 const chartLabels = computed(() => breakdown.value.map(item => item.name))
-const chartData = computed(() => breakdown.value.map(item => item.total))
+const chartData = computed(() => {
+  const total = totalAmount.value
+  if (total === 0) return breakdown.value.map(() => 0)
+  return breakdown.value.map(item => parseFloat(((item.total / total) * 100).toFixed(1)))
+})
 
 const totalAmount = computed(() => {
   return breakdown.value.reduce((sum, item) => sum + item.total, 0)
@@ -275,11 +279,14 @@ onMounted(() => {
               <span class="font-medium text-gray-800">{{ item.name }}</span>
             </div>
             <div class="flex items-center gap-4">
-              <div class="w-32 bg-gray-200 rounded-full h-2">
+              <span class="text-sm text-gray-500 w-12 text-right">
+                {{ totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0 }}%
+              </span>
+              <div class="w-24 bg-gray-200 rounded-full h-2">
                 <div
                   class="h-2 rounded-full"
                   :class="transactionType === 'EXPENSE' ? 'bg-red-500' : 'bg-green-500'"
-                  :style="{ width: (item.total / breakdown[0].total * 100) + '%' }"
+                  :style="{ width: (totalAmount > 0 ? (item.total / totalAmount) * 100 : 0) + '%' }"
                 ></div>
               </div>
               <span class="font-semibold text-gray-800 w-32 text-right">
