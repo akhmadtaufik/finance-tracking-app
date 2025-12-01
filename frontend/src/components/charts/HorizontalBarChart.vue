@@ -82,12 +82,7 @@ const chartOptions = {
     tooltip: {
       callbacks: {
         label: (context) => {
-          const value = context.raw
-          return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-          }).format(value)
+          return context.raw + '%'
         }
       }
     }
@@ -95,19 +90,13 @@ const chartOptions = {
   scales: {
     x: {
       beginAtZero: true,
+      max: 100,
       grid: {
         display: true,
         color: 'rgba(0, 0, 0, 0.05)'
       },
       ticks: {
-        callback: (value) => {
-          if (value >= 1000000) {
-            return (value / 1000000).toFixed(1) + 'M'
-          } else if (value >= 1000) {
-            return (value / 1000).toFixed(0) + 'K'
-          }
-          return value
-        }
+        callback: (value) => value + '%'
       }
     },
     y: {
