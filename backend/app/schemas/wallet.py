@@ -1,22 +1,25 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
 
 class WalletCreate(BaseModel):
-    """Schema for creating a new wallet."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "name": "Bank BCA",
-            "balance": 5000000.00,
-            "icon": "bca"
+    """Schema for creating a new wallet with strict validation."""
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "name": "Bank BCA",
+                "balance": 5000000.00,
+                "icon": "bca"
+            }
         }
-    })
+    )
     
-    name: str
-    balance: Optional[Decimal] = Decimal("0.00")
-    icon: Optional[str] = "wallet"
+    name: str = Field(..., min_length=1, max_length=100, description="Wallet name")
+    balance: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=15, decimal_places=2)
+    icon: str = Field(default="wallet", max_length=50)
 
 
 class WalletResponse(BaseModel):

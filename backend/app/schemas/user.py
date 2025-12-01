@@ -1,21 +1,37 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+import re
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from datetime import datetime
 from typing import Optional
 
 
 class UserCreate(BaseModel):
-    """Schema for user registration."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "email": "john@example.com",
-            "username": "johndoe",
-            "password": "SecureP@ss123"
+    """Schema for user registration with password strength validation."""
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "email": "john@example.com",
+                "username": "johndoe",
+                "password": "SecureP@ss123"
+            }
         }
-    })
+    )
     
     email: EmailStr
-    username: str
-    password: str
+    username: str = Field(..., min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
+    password: str = Field(..., min_length=8, max_length=128)
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """Ensure password contains uppercase, lowercase, and digit."""
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
 
 class UserResponse(BaseModel):
