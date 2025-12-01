@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useAuthStore } from "./stores/auth";
 import { useRouter, useRoute } from "vue-router";
 
@@ -8,6 +8,9 @@ const router = useRouter();
 const route = useRoute();
 
 const sidebarExpanded = ref(false);
+
+const isAdminPage = computed(() => route.path.startsWith('/admin'));
+const showSidebar = computed(() => authStore.isAuthenticated && !isAdminPage.value);
 
 const menuItems = [
   {
@@ -57,7 +60,7 @@ const isActive = (path) => {
   <div class="min-h-screen bg-gray-100">
     <!-- Sidebar -->
     <aside
-      v-if="authStore.isAuthenticated"
+      v-if="showSidebar"
       @mouseenter="sidebarExpanded = true"
       @mouseleave="sidebarExpanded = false"
       :class="[
@@ -123,6 +126,34 @@ const isActive = (path) => {
                 ]"
               >
                 {{ item.name }}
+              </span>
+            </router-link>
+          </li>
+          
+          <!-- Admin Link (only for superusers) -->
+          <li v-if="authStore.user?.is_superuser" class="pt-4 border-t border-gray-200 mt-4">
+            <router-link
+              to="/admin"
+              :class="[
+                'flex items-center px-3 py-3 rounded-lg transition-colors duration-200',
+                'text-red-600 hover:bg-red-50',
+              ]"
+            >
+              <svg
+                class="w-6 h-6 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span
+                :class="[
+                  'ml-3 font-medium whitespace-nowrap transition-opacity duration-300',
+                  sidebarExpanded ? 'opacity-100' : 'opacity-0',
+                ]"
+              >
+                Admin Panel
               </span>
             </router-link>
           </li>
@@ -199,7 +230,7 @@ const isActive = (path) => {
     <main
       :class="[
         'transition-all duration-300',
-        authStore.isAuthenticated ? 'ml-16' : '',
+        showSidebar ? 'ml-16' : '',
       ]"
     >
       <router-view />
