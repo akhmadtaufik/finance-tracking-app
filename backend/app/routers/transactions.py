@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 from datetime import date
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import asyncpg
 
 from ..core.database import get_db_conn
@@ -16,6 +16,17 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 
 class TransferRequest(BaseModel):
+    """Schema for wallet-to-wallet transfer request."""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "source_wallet_id": 1,
+            "dest_wallet_id": 2,
+            "amount": 500000.00,
+            "transaction_date": "2024-12-01",
+            "description": "Transfer ke dompet darurat"
+        }
+    })
+    
     source_wallet_id: int
     dest_wallet_id: int
     amount: Decimal
@@ -23,11 +34,28 @@ class TransferRequest(BaseModel):
     description: Optional[str] = None
 
 
-@router.get("", response_model=List[TransactionResponse])
+@router.get(
+    "",
+    response_model=List[TransactionResponse],
+    summary="List Transactions",
+    description="""
+Retrieve all transactions for the authenticated user.
+
+**Filters:**
+- `type`: Filter by `INCOME` or `EXPENSE`
+- `limit`: Maximum results to return (default: 50, max: 100)
+- `offset`: Pagination offset for skipping records
+    """,
+    responses={
+        200: {"description": "List of transactions"},
+        401: {"description": "Not authenticated"},
+        500: {"description": "Internal server error"}
+    }
+)
 async def get_transactions(
-    type: Optional[str] = None,
-    limit: int = Query(default=50, le=100),
-    offset: int = Query(default=0, ge=0),
+    type: Optional[str] = Query(default=None, description="Filter by INCOME or EXPENSE"),
+    limit: int = Query(default=50, le=100, description="Max results (default: 50)"),
+    offset: int = Query(default=0, ge=0, description="Pagination offset"),
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn)
 ):
@@ -46,7 +74,20 @@ async def get_transactions(
     return transactions
 
 
-@router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Transaction",
+    description="Record a new income or expense transaction for the authenticated user.",
+    responses={
+        201: {"description": "Transaction created successfully"},
+        400: {"description": "Category type mismatch with transaction type"},
+        403: {"description": "Category not accessible"},
+        404: {"description": "Wallet or Category not found"},
+        409: {"description": "Duplicate transaction"}
+    }
+)
 async def create_transaction(
     trans_data: TransactionCreate,
     current_user: dict = Depends(get_current_user),
@@ -93,7 +134,23 @@ async def create_transaction(
     return transaction
 
 
-@router.get("/summary")
+@router.get(
+    "/summary",
+    summary="Get Financial Summary",
+    description="""
+Get a summary of the user's financial status.
+
+**Returns:**
+- `total_income`: Sum of all income transactions
+- `total_expense`: Sum of all expense transactions  
+- `total_balance`: Sum of all wallet balances
+- `net`: Income minus Expense
+    """,
+    responses={
+        200: {"description": "Financial summary"},
+        401: {"description": "Not authenticated"}
+    }
+)
 async def get_summary(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn)
@@ -114,7 +171,17 @@ async def get_summary(
     }
 
 
-@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{transaction_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Transaction",
+    description="Delete a transaction and reverse its effect on the wallet balance.",
+    responses={
+        204: {"description": "Transaction deleted successfully"},
+        401: {"description": "Not authenticated"},
+        404: {"description": "Transaction not found"}
+    }
+)
 async def delete_transaction(
     transaction_id: int,
     current_user: dict = Depends(get_current_user),
@@ -127,7 +194,25 @@ async def delete_transaction(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
 
 
-@router.post("/transfer", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/transfer",
+    status_code=status.HTTP_201_CREATED,
+    summary="Transfer Between Wallets",
+    description="""
+Transfer funds between two wallets owned by the authenticated user.
+
+**Important Notes:**
+- Creates paired EXPENSE (from source) and INCOME (to destination) transactions
+- Automatically uses the global 'Transfer' category
+- Transfer transactions are **excluded** from expense analytics and reports
+- Both wallets must belong to the authenticated user
+    """,
+    responses={
+        201: {"description": "Transfer completed successfully"},
+        400: {"description": "Invalid transfer (same wallet, insufficient balance, or amount <= 0)"},
+        404: {"description": "Source or destination wallet not found"}
+    }
+)
 async def transfer_funds(
     data: TransferRequest,
     current_user: dict = Depends(get_current_user),
