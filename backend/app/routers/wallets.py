@@ -30,7 +30,8 @@ async def create_wallet(
     wallet = await wallet_repo.create(
         current_user["id"],
         wallet_data.name,
-        wallet_data.balance
+        wallet_data.balance,
+        wallet_data.icon
     )
     return wallet
 
