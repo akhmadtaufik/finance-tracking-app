@@ -95,6 +95,78 @@ class TransactionRepository:
         )
         return dict(row)
 
+    async def transfer_funds(
+        self,
+        user_id: int,
+        source_wallet_id: int,
+        dest_wallet_id: int,
+        amount: Decimal,
+        transaction_date: date,
+        description: Optional[str] = None
+    ) -> dict:
+        async with self.conn.transaction():
+            # Get or create "Transfer" category (global)
+            category = await self.conn.fetchrow(
+                """
+                SELECT id FROM categories 
+                WHERE name = 'Transfer' AND (user_id = $1 OR user_id IS NULL)
+                ORDER BY user_id NULLS LAST
+                LIMIT 1
+                """,
+                user_id
+            )
+            
+            if not category:
+                category = await self.conn.fetchrow(
+                    """
+                    INSERT INTO categories (user_id, name, type, icon)
+                    VALUES (NULL, 'Transfer', 'EXPENSE', 'repeat')
+                    ON CONFLICT (user_id, name, type) DO UPDATE SET icon = 'repeat'
+                    RETURNING id
+                    """
+                )
+            
+            category_id = category['id']
+            transfer_desc = description or "Transfer between wallets"
+            
+            # Deduct from source wallet
+            await self.conn.execute(
+                "UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND user_id = $3",
+                amount, source_wallet_id, user_id
+            )
+            
+            # Add to destination wallet
+            await self.conn.execute(
+                "UPDATE wallets SET balance = balance + $1 WHERE id = $2 AND user_id = $3",
+                amount, dest_wallet_id, user_id
+            )
+            
+            # Insert EXPENSE record (from source)
+            out_record = await self.conn.fetchrow(
+                """
+                INSERT INTO transactions (user_id, wallet_id, category_id, amount, type, transaction_date, description)
+                VALUES ($1, $2, $3, $4, 'EXPENSE', $5, $6)
+                RETURNING id, user_id, wallet_id, category_id, amount, type, transaction_date, description, created_at
+                """,
+                user_id, source_wallet_id, category_id, amount, transaction_date, f"[OUT] {transfer_desc}"
+            )
+            
+            # Insert INCOME record (to destination)
+            in_record = await self.conn.fetchrow(
+                """
+                INSERT INTO transactions (user_id, wallet_id, category_id, amount, type, transaction_date, description)
+                VALUES ($1, $2, $3, $4, 'INCOME', $5, $6)
+                RETURNING id, user_id, wallet_id, category_id, amount, type, transaction_date, description, created_at
+                """,
+                user_id, dest_wallet_id, category_id, amount, transaction_date, f"[IN] {transfer_desc}"
+            )
+            
+            return {
+                "out_transaction": dict(out_record),
+                "in_transaction": dict(in_record),
+                "amount": float(amount)
+            }
+
     async def delete(self, transaction_id: int, user_id: int) -> bool:
         async with self.conn.transaction():
             # Get transaction details first
