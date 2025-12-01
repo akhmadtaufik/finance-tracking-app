@@ -7,21 +7,21 @@ class WalletRepository:
     def __init__(self, conn: asyncpg.Connection):
         self.conn = conn
 
-    async def create(self, user_id: int, name: str, balance: Decimal = Decimal("0.00")) -> dict:
+    async def create(self, user_id: int, name: str, balance: Decimal = Decimal("0.00"), icon: str = "wallet") -> dict:
         row = await self.conn.fetchrow(
             """
-            INSERT INTO wallets (user_id, name, balance)
-            VALUES ($1, $2, $3)
-            RETURNING id, user_id, name, balance, created_at
+            INSERT INTO wallets (user_id, name, balance, icon)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, user_id, name, balance, icon, created_at
             """,
-            user_id, name, balance
+            user_id, name, balance, icon
         )
         return dict(row)
 
     async def get_by_user(self, user_id: int) -> List[dict]:
         rows = await self.conn.fetch(
             """
-            SELECT id, user_id, name, balance, created_at
+            SELECT id, user_id, name, balance, icon, created_at
             FROM wallets WHERE user_id = $1
             ORDER BY created_at DESC
             """,
@@ -32,7 +32,7 @@ class WalletRepository:
     async def get_by_id(self, wallet_id: int, user_id: int) -> Optional[dict]:
         row = await self.conn.fetchrow(
             """
-            SELECT id, user_id, name, balance, created_at
+            SELECT id, user_id, name, balance, icon, created_at
             FROM wallets WHERE id = $1 AND user_id = $2
             """,
             wallet_id, user_id
