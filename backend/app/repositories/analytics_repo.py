@@ -23,7 +23,7 @@ class AnalyticsRepository:
               AND t.type = $2
               AND t.transaction_date >= $3
               AND t.transaction_date <= $4
-              AND c.name != 'Transfer'
+              AND LOWER(c.name) <> 'transfer'
             GROUP BY c.id, c.name, c.icon
             HAVING SUM(t.amount) > 0
             ORDER BY total DESC
@@ -63,8 +63,8 @@ class AnalyticsRepository:
         row = await self.conn.fetchrow(
             """
             SELECT 
-                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND c.name != 'Transfer' THEN t.amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND c.name != 'Transfer' THEN t.amount ELSE 0 END), 0) as total_expense,
+                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_expense,
                 COUNT(*) as transaction_count
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
