@@ -117,15 +117,18 @@ async def create_transaction(
             detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})"
         )
     
-    transaction = await trans_repo.create(
-        user_id=current_user["id"],
-        wallet_id=trans_data.wallet_id,
-        category_id=trans_data.category_id,
-        amount=trans_data.amount,
-        trans_type=trans_data.type,
-        transaction_date=trans_data.transaction_date or date.today(),
-        description=trans_data.description
-    )
+    try:
+        transaction = await trans_repo.create(
+            user_id=current_user["id"],
+            wallet_id=trans_data.wallet_id,
+            category_id=trans_data.category_id,
+            amount=trans_data.amount,
+            trans_type=trans_data.type,
+            transaction_date=trans_data.transaction_date or date.today(),
+            description=trans_data.description
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     
     # Add category and wallet names to response
     transaction["category_name"] = category["name"]
@@ -259,14 +262,17 @@ async def transfer_funds(
         )
     
     # Perform transfer
-    result = await trans_repo.transfer_funds(
-        user_id=current_user["id"],
-        source_wallet_id=data.source_wallet_id,
-        dest_wallet_id=data.dest_wallet_id,
-        amount=data.amount,
-        transaction_date=data.transaction_date or date.today(),
-        description=data.description
-    )
+    try:
+        result = await trans_repo.transfer_funds(
+            user_id=current_user["id"],
+            source_wallet_id=data.source_wallet_id,
+            dest_wallet_id=data.dest_wallet_id,
+            amount=data.amount,
+            transaction_date=data.transaction_date or date.today(),
+            description=data.description
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     
     return {
         "message": "Transfer successful",
