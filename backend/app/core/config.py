@@ -1,27 +1,48 @@
 import os
 import json
+from typing import List
 from dotenv import load_dotenv
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
-load_dotenv()
+load_dotenv(override=True)
 
 
-class Settings:
-    # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost"
+    ]
+    COOKIE_SECURE: bool = False
+    RATE_LIMIT_ENABLED: bool = True
     
-    # JWT Settings
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
-    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore"
+    }
     
-    # CORS Settings
-    BACKEND_CORS_ORIGINS: list = json.loads(
-        os.getenv("BACKEND_CORS_ORIGINS", '["http://localhost:5173", "http://localhost:3000", "http://localhost"]')
-    )
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, value: str) -> str:
+        if not value or len(value) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        return value
     
-    # Cookie Settings
-    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value):
+        if isinstance(value, str):
+            if value.strip().startswith("["):
+                return json.loads(value)
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
 
 settings = Settings()
