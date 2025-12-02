@@ -3,9 +3,11 @@ module.exports = {
   root: true,
   extends: [
     'plugin:vue/vue3-recommended',
+    'plugin:vuejs-accessibility/recommended',
     'eslint:recommended',
     '@vue/eslint-config-prettier'
   ],
+  plugins: ['vuejs-accessibility'],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module'
