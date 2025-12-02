@@ -19,6 +19,20 @@ class TransactionRepository:
         description: Optional[str] = None
     ) -> dict:
         async with self.conn.transaction():
+            wallet = await self.conn.fetchrow(
+                """
+                SELECT id, balance
+                FROM wallets
+                WHERE id = $1 AND user_id = $2
+                FOR UPDATE
+                """,
+                wallet_id, user_id
+            )
+            if not wallet:
+                raise ValueError("Wallet not found")
+            if trans_type == "EXPENSE" and wallet["balance"] < amount:
+                raise ValueError("Insufficient balance in wallet")
+            
             # Insert transaction
             row = await self.conn.fetchrow(
                 """
@@ -105,6 +119,33 @@ class TransactionRepository:
         description: Optional[str] = None
     ) -> dict:
         async with self.conn.transaction():
+            source_wallet = await self.conn.fetchrow(
+                """
+                SELECT id, balance
+                FROM wallets
+                WHERE id = $1 AND user_id = $2
+                FOR UPDATE
+                """,
+                source_wallet_id, user_id
+            )
+            if not source_wallet:
+                raise ValueError("Source wallet not found")
+            
+            dest_wallet = await self.conn.fetchrow(
+                """
+                SELECT id
+                FROM wallets
+                WHERE id = $1 AND user_id = $2
+                FOR UPDATE
+                """,
+                dest_wallet_id, user_id
+            )
+            if not dest_wallet:
+                raise ValueError("Destination wallet not found")
+            
+            if source_wallet["balance"] < amount:
+                raise ValueError("Insufficient balance in source wallet")
+            
             # Get or create "Transfer" category (global)
             category = await self.conn.fetchrow(
                 """
@@ -177,6 +218,11 @@ class TransactionRepository:
             
             if not trans:
                 return False
+            
+            await self.conn.fetchrow(
+                "SELECT id FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE",
+                trans['wallet_id'], user_id
+            )
             
             # Reverse the balance change
             if trans['type'] == "INCOME":
