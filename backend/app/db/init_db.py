@@ -69,12 +69,13 @@ async def init_database():
         
         # Check if superuser exists
         superuser = await conn.fetchrow(
-            "SELECT id FROM users WHERE is_superuser = TRUE"
+            "SELECT id FROM users WHERE email = $1",
+            ADMIN_EMAIL
         )
         
         if not superuser:
             if not ADMIN_PASSWORD:
-                print("WARNING: ADMIN_PASSWORD not set in .env. Skipping superuser creation.")
+                print("WARNING: ADMIN_PASSWORD not set. Skipping superuser creation.")
             else:
                 print("Creating superuser account...")
                 hashed_password = pwd_context.hash(ADMIN_PASSWORD)
