@@ -1,6 +1,6 @@
 import os
 import json
-from typing import List
+from typing import List, Literal
 from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         "http://localhost"
     ]
     COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     RATE_LIMIT_ENABLED: bool = True
     
     model_config = {
@@ -43,6 +44,16 @@ class Settings(BaseSettings):
                 return json.loads(value)
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+    
+    @field_validator("COOKIE_SAMESITE", mode="before")
+    @classmethod
+    def normalize_samesite(cls, value: str) -> str:
+        if not value:
+            return "lax"
+        normalized = value.lower()
+        if normalized not in {"lax", "strict", "none"}:
+            raise ValueError("COOKIE_SAMESITE must be one of: lax, strict, none")
+        return normalized
 
 
 settings = Settings()
