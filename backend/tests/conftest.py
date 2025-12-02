@@ -16,7 +16,7 @@ if PROJECT_ROOT not in sys.path:
 TEST_DATABASE_URL = "postgresql://postgres:Rnpl1105@localhost:5432/finance_test_db"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
-TEST_USER_PASSWORD = os.getenv("TEST_PASSWORD") or secrets.token_urlsafe(24)
+TEST_USER_PASSWORD = os.getenv("TEST_PASSWORD")
 
 
 @pytest.fixture(scope="session")
