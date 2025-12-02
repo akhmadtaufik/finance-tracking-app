@@ -100,10 +100,11 @@ class TransactionRepository:
         row = await self.conn.fetchrow(
             """
             SELECT 
-                COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END), 0) as total_expense
-            FROM transactions
-            WHERE user_id = $1
+                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_expense
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1
             """,
             user_id
         )
