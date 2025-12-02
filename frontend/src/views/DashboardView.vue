@@ -33,6 +33,17 @@ const handleDelete = async (id) => {
     await financeStore.deleteTransaction(id)
   }
 }
+
+const isTransferCategory = (name) => (name || '').toLowerCase() === 'transfer'
+
+const getCategoryBadgeClass = (trans) => {
+  if (isTransferCategory(trans.category_name)) {
+    return 'bg-blue-100 text-blue-800'
+  }
+  return trans.type === 'INCOME'
+    ? 'bg-green-100 text-green-800'
+    : 'bg-red-100 text-red-800'
+}
 </script>
 
 <template>
@@ -119,10 +130,18 @@ const handleDelete = async (id) => {
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
-                  class="px-2 py-1 text-xs font-medium rounded-full"
-                  :class="trans.type === 'INCOME' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                  class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
+                  :class="getCategoryBadgeClass(trans)"
                 >
-                  {{ trans.category_name }}
+                  <template v-if="isTransferCategory(trans.category_name)">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
+                    </svg>
+                    Transfer
+                  </template>
+                  <template v-else>
+                    {{ trans.category_name }}
+                  </template>
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
