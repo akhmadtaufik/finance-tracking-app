@@ -6,6 +6,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import asyncpg
 
 from .config import settings
@@ -13,6 +15,7 @@ from .database import get_db_conn
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 
 # --- Password Functions ---
