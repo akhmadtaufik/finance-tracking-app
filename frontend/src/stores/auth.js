@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api'
+import axios from 'axios'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
@@ -21,6 +22,8 @@ export const useAuthStore = defineStore('auth', () => {
     
     token.value = response.data.access_token
     localStorage.setItem('token', token.value)
+    api.defaults.headers.common.Authorization = `Bearer ${token.value}`
+    axios.defaults.headers.common.Authorization = `Bearer ${token.value}`
     
     await fetchUser()
     return response.data
@@ -60,6 +63,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       sessions.value = []
       localStorage.removeItem('token')
+      delete api.defaults.headers.common.Authorization
+      delete axios.defaults.headers.common.Authorization
     }
   }
 
@@ -71,6 +76,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       sessions.value = []
       localStorage.removeItem('token')
+      delete api.defaults.headers.common.Authorization
+      delete axios.defaults.headers.common.Authorization
       return response.data
     } catch (error) {
       console.error('Logout all devices error:', error)
