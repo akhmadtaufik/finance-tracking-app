@@ -4,6 +4,7 @@
 .env.*.local
 frontend/.env.development
 frontend/.env.production
+certs/
 
 # Python
 __pycache__/
