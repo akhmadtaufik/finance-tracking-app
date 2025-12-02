@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timedelta
+from typing import Optional, List
+from datetime import datetime, timedelta, timezone
 import asyncpg
 
 from ..core.database import get_db_conn
 from ..core.deps import get_current_active_superuser
+from ..schemas.user import UserResponse
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -28,7 +29,7 @@ async def get_admin_stats(
     total_transactions = await conn.fetchval("SELECT COUNT(*) FROM transactions")
     
     # Active users in last 24 hours (users who made transactions)
-    yesterday = datetime.utcnow() - timedelta(hours=24)
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     active_users_24h = await conn.fetchval(
         """
         SELECT COUNT(DISTINCT user_id) 
@@ -57,7 +58,7 @@ async def get_admin_stats(
     }
 
 
-@router.get("/users")
+@router.get("/users", response_model=List[UserResponse])
 async def get_all_users(
     current_user: dict = Depends(get_current_active_superuser),
     conn: asyncpg.Connection = Depends(get_db_conn)
@@ -65,30 +66,13 @@ async def get_all_users(
     users = await conn.fetch(
         """
         SELECT 
-            u.id, u.email, u.username, u.is_superuser, u.is_active, u.created_at,
-            COUNT(DISTINCT w.id) as wallet_count,
-            COUNT(DISTINCT t.id) as transaction_count
+            u.id, u.email, u.username, u.is_superuser, u.is_active, u.created_at
         FROM users u
-        LEFT JOIN wallets w ON w.user_id = u.id
-        LEFT JOIN transactions t ON t.user_id = u.id
-        GROUP BY u.id
         ORDER BY u.created_at DESC
         """
     )
     
-    return [
-        {
-            "id": user["id"],
-            "email": user["email"],
-            "username": user["username"],
-            "is_superuser": user["is_superuser"],
-            "is_active": user["is_active"],
-            "created_at": str(user["created_at"]),
-            "wallet_count": user["wallet_count"],
-            "transaction_count": user["transaction_count"]
-        }
-        for user in users
-    ]
+    return [UserResponse(**dict(user)) for user in users]
 
 
 @router.patch("/users/{user_id}/toggle-status")
