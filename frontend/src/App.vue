@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed } from "vue";
-import { useAuthStore } from "./stores/auth";
-import { useRouter, useRoute } from "vue-router";
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { useAuthStore } from './stores/auth'
+import { useRouter, useRoute } from 'vue-router'
+import ToastNotification from './components/ToastNotification.vue'
+import ErrorBoundary from './components/ErrorBoundary.vue'
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -50,6 +52,26 @@ const logout = () => {
   router.push("/login");
 };
 
+const focusMainContent = () => {
+  nextTick(() => {
+    const main = document.getElementById('main-content')
+    if (main) {
+      main.focus()
+    }
+  })
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    focusMainContent()
+  }
+)
+
+onMounted(() => {
+  focusMainContent()
+})
+
 const isActive = (path) => {
   if (path === "/") return route.path === "/";
   return route.path.startsWith(path);
@@ -57,6 +79,8 @@ const isActive = (path) => {
 </script>
 
 <template>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <ToastNotification />
   <div class="min-h-screen bg-gray-100">
     <!-- Sidebar -->
     <aside
@@ -228,12 +252,17 @@ const isActive = (path) => {
 
     <!-- Main Content -->
     <main
+      id="main-content"
+      role="main"
+      tabindex="-1"
       :class="[
-        'transition-all duration-300',
+        'transition-all duration-300 focus:outline-none',
         showSidebar ? 'ml-16' : '',
       ]"
     >
-      <router-view />
+      <ErrorBoundary>
+        <router-view />
+      </ErrorBoundary>
     </main>
   </div>
 </template>
