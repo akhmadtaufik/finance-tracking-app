@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import secrets
 import pytest
 import pytest_asyncio
 import asyncpg
@@ -14,6 +15,8 @@ if PROJECT_ROOT not in sys.path:
 # Set test database URL
 TEST_DATABASE_URL = "postgresql://postgres:Rnpl1105@localhost:5432/finance_test_db"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+TEST_USER_PASSWORD = os.getenv("TEST_PASSWORD") or secrets.token_urlsafe(24)
 
 
 @pytest.fixture(scope="session")
@@ -112,7 +115,7 @@ async def client(test_db):
 @pytest_asyncio.fixture
 async def test_user(client):
     """Create a test user via API and return user data with password."""
-    password = "TestPass123"
+    password = TEST_USER_PASSWORD
     
     # Register user via API
     response = await client.post("/auth/register", json={
