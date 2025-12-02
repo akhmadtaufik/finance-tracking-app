@@ -1,11 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import asyncpg
 
 from backend.app.core.database import create_pool, close_pool
 from backend.app.core.config import settings
+from backend.app.core.security import limiter
 from backend.app.core.logging_config import logger
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.core.exceptions import (
@@ -18,6 +20,8 @@ from backend.app.core.exceptions import (
     global_exception_handler
 )
 from backend.app.routers import auth_router, wallets_router, categories_router, transactions_router, analytics_router, reports_router, admin_router
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 
 @asynccontextmanager
@@ -50,7 +54,12 @@ All endpoints (except `/auth/*`) require a valid JWT token in the `Authorization
     redoc_url="/redoc"
 )
 
-# Middleware (order matters: first added = outermost)
+app.state.limiter = limiter
+if settings.RATE_LIMIT_ENABLED:
+    # Middleware (order matters: first added = outermost)
+    app.add_middleware(SlowAPIMiddleware)
+else:
+    limiter.enabled = False
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +77,14 @@ app.add_exception_handler(asyncpg.ForeignKeyViolationError, asyncpg_fk_violation
 app.add_exception_handler(asyncpg.NotNullViolationError, asyncpg_not_null_violation_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, global_exception_handler)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Rate limit exceeded"}
+    )
 
 app.include_router(auth_router)
 app.include_router(wallets_router)
