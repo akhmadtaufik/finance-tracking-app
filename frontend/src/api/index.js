@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { pinia } from '../stores'
+import { useUIStore } from '../stores/ui'
 
 axios.defaults.withCredentials = true
 const existingToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
@@ -18,6 +20,8 @@ const api = axios.create({
   withCredentials: true  // PENTING: Agar cookie refresh_token terkirim otomatis
 })
 
+const uiStore = useUIStore(pinia)
+
 // State untuk mencegah multiple refresh request
 let isRefreshing = false
 let failedQueue = []
@@ -34,22 +38,49 @@ const processQueue = (error, token = null) => {
   failedQueue = []
 }
 
+const extractErrorMessage = (error) => {
+  if (error.response?.data) {
+    return (
+      error.response.data.detail ||
+      error.response.data.message ||
+      error.response.data.error ||
+      'Terjadi kesalahan. Silakan coba lagi.'
+    )
+  }
+  return error.message || 'Terjadi kesalahan. Silakan coba lagi.'
+}
+
+const showErrorToast = (error) => {
+  const status = error.response?.status
+  if (status === 400 || status >= 500) {
+    uiStore.showToast({ message: extractErrorMessage(error), type: 'error' })
+  }
+}
+
 // Request Interceptor - Tambahkan access token ke header
 api.interceptors.request.use(
   (config) => {
+    uiStore.startLoading()
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    uiStore.stopLoading()
+    return Promise.reject(error)
+  }
 )
 
 // Response Interceptor - Handle 401 dan auto refresh token
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    uiStore.stopLoading()
+    return response
+  },
   async (error) => {
+    uiStore.stopLoading()
     const originalRequest = error.config
     
     // Jika error 401 dan belum pernah retry
@@ -105,7 +136,7 @@ api.interceptors.response.use(
         isRefreshing = false
       }
     }
-    
+    showErrorToast(error)
     return Promise.reject(error)
   }
 )
