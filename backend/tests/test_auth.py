@@ -10,7 +10,7 @@ class TestAuthentication:
         response = await client.post("/auth/register", json={
             "email": "newuser@example.com",
             "username": "newuser",
-            "password": "SecurePass123"
+            "password": "SecurePass!23"
         })
         
         assert response.status_code == 201
@@ -35,7 +35,7 @@ class TestAuthentication:
         response = await client.post("/auth/register", json={
             "email": test_user["email"],  # Already exists
             "username": "another",
-            "password": "AnotherPass123"
+            "password": "AnotherPass!23"
         })
         
         assert response.status_code == 400
