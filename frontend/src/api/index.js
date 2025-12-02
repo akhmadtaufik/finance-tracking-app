@@ -1,5 +1,11 @@
 import axios from 'axios'
 
+axios.defaults.withCredentials = true
+const existingToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+if (existingToken) {
+  axios.defaults.headers.common.Authorization = `Bearer ${existingToken}`
+}
+
 // Use /api for Docker (Nginx proxies to backend)
 // Use http://localhost:8000 for local development
 const baseURL = import.meta.env.VITE_API_URL || '/api'
@@ -76,6 +82,8 @@ api.interceptors.response.use(
         // Simpan token baru
         const newToken = data.access_token
         localStorage.setItem('token', newToken)
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`
+        axios.defaults.headers.common.Authorization = `Bearer ${newToken}`
         
         // Proses antrian request yang menunggu
         processQueue(null, newToken)
@@ -88,6 +96,8 @@ api.interceptors.response.use(
         // Refresh gagal - hapus token dan redirect ke login
         processQueue(refreshError, null)
         localStorage.removeItem('token')
+        delete api.defaults.headers.common.Authorization
+        delete axios.defaults.headers.common.Authorization
         window.location.href = '/login'
         return Promise.reject(refreshError)
         
