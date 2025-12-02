@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict, Field
+import re
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime
 from typing import Optional, Literal
 
@@ -19,6 +20,12 @@ class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Category name")
     type: Literal["INCOME", "EXPENSE"]
     icon: str = Field(default="default", max_length=50)
+    
+    @field_validator('name')
+    @classmethod
+    def sanitize_name(cls, value: str) -> str:
+        sanitized = re.sub(r'<[^>]+>', '', value)
+        return sanitized.strip()
 
 
 class CategoryResponse(BaseModel):

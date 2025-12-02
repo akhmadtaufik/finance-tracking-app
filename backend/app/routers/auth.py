@@ -138,6 +138,7 @@ Exchange a valid refresh token for a new access token.
 - This prevents token reuse attacks
     """
 )
+@limiter.limit("10/minute")
 async def refresh_access_token(
     request: Request,
     response: Response,

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost"
     ]
-    COOKIE_SECURE: bool = False
+    COOKIE_SECURE: bool = True
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     RATE_LIMIT_ENABLED: bool = True
     
@@ -54,6 +54,13 @@ class Settings(BaseSettings):
         if normalized not in {"lax", "strict", "none"}:
             raise ValueError("COOKIE_SAMESITE must be one of: lax, strict, none")
         return normalized
+    
+    @field_validator("COOKIE_SECURE", mode="before")
+    @classmethod
+    def enforce_cookie_secure_default(cls, value):
+        if value is None:
+            return True
+        return value
 
 
 settings = Settings()

@@ -34,9 +34,12 @@ class TransactionCreate(BaseModel):
     @field_validator('description')
     @classmethod
     def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
-        """Prevent XSS by rejecting script tags."""
-        if v and XSS_PATTERN.search(v):
-            raise ValueError('HTML/Script tags are not allowed in description')
+        """Prevent XSS by stripping HTML tags."""
+        if v:
+            if XSS_PATTERN.search(v):
+                raise ValueError('HTML/Script tags are not allowed in description')
+            sanitized = re.sub(r'<[^>]+>', '', v)
+            return sanitized
         return v
 
 
