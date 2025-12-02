@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, computed } from 'vue'
 import { useFinanceStore } from '../stores/finance'
+import SummaryCard from '../components/SummaryCard.vue'
 
 const financeStore = useFinanceStore()
 
@@ -52,30 +53,25 @@ const getCategoryBadgeClass = (trans) => {
     
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-sm font-medium text-gray-500">Total Balance</p>
-        <p class="text-2xl font-bold text-gray-800">
-          {{ formatCurrency(financeStore.summary.total_balance) }}
-        </p>
-      </div>
-      <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-sm font-medium text-gray-500">Total Income</p>
-        <p class="text-2xl font-bold text-green-600">
-          {{ formatCurrency(financeStore.summary.total_income) }}
-        </p>
-      </div>
-      <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-sm font-medium text-gray-500">Total Expense</p>
-        <p class="text-2xl font-bold text-red-600">
-          {{ formatCurrency(financeStore.summary.total_expense) }}
-        </p>
-      </div>
-      <div class="bg-white rounded-lg shadow p-6">
-        <p class="text-sm font-medium text-gray-500">Net</p>
-        <p class="text-2xl font-bold" :class="financeStore.summary.net >= 0 ? 'text-green-600' : 'text-red-600'">
-          {{ formatCurrency(financeStore.summary.net) }}
-        </p>
-      </div>
+      <SummaryCard
+        title="Total Balance"
+        :amount="financeStore.summary.total_balance || 0"
+      />
+      <SummaryCard
+        title="Total Income"
+        :amount="financeStore.summary.total_income || 0"
+        variant="income"
+      />
+      <SummaryCard
+        title="Total Expense"
+        :amount="financeStore.summary.total_expense || 0"
+        variant="expense"
+      />
+      <SummaryCard
+        title="Net"
+        :amount="financeStore.summary.net || 0"
+        :variant="financeStore.summary.net >= 0 ? 'income' : 'expense'"
+      />
     </div>
 
     <!-- Wallets -->
