@@ -117,7 +117,7 @@ async def login(
         value=refresh_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite=settings.COOKIE_SAMESITE,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         path=REFRESH_COOKIE_PATH
     )
@@ -188,7 +188,7 @@ async def refresh_access_token(
         value=new_refresh_token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite=settings.COOKIE_SAMESITE,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         path=REFRESH_COOKIE_PATH
     )
@@ -211,7 +211,12 @@ async def logout(
         await token_repo.revoke(hash_token(refresh_token))
     
     # Delete the cookie
-    response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE
+    )
     
     return {"message": "Logged out successfully"}
 
@@ -230,7 +235,12 @@ async def logout_all_devices(
     revoked_count = await token_repo.revoke_all_for_user(current_user["id"])
     
     # Delete current cookie
-    response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE
+    )
     
     return {"message": f"Logged out from {revoked_count} device(s)"}
 
