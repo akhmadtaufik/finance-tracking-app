@@ -7,7 +7,7 @@ from ..core.database import get_db_conn
 from ..core.config import settings
 from ..core.security import (
     hash_password, verify_password, create_access_token, 
-    get_current_user, create_refresh_token, hash_token
+    get_current_user, create_refresh_token, hash_token, limiter
 )
 from ..schemas.user import UserCreate, UserResponse, Token
 from ..repositories.user_repo import UserRepository
@@ -17,7 +17,8 @@ from ..repositories.token_repo import RefreshTokenRepository
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 REFRESH_COOKIE_NAME = "refresh_token"
-REFRESH_COOKIE_PATH = "/auth"
+# Use root path so reverse proxies (e.g., /api prefix) still send the cookie
+REFRESH_COOKIE_PATH = "/"
 
 
 @router.post(
@@ -27,7 +28,13 @@ REFRESH_COOKIE_PATH = "/auth"
     summary="Register New User",
     description="Create a new user account with email and password."
 )
-async def register(user_data: UserCreate, conn: asyncpg.Connection = Depends(get_db_conn)):
+@limiter.limit("3/minute")
+async def register(
+    request: Request,
+    user_data: UserCreate,
+    conn: asyncpg.Connection = Depends(get_db_conn)
+):
+    _ = request.client  # touch request to satisfy rate limiter usage
     user_repo = UserRepository(conn)
     wallet_repo = WalletRepository(conn)
     
@@ -61,6 +68,7 @@ Authenticate user and receive tokens.
 - `refresh_token` in HTTPOnly cookie (7 day lifetime)
     """
 )
+@limiter.limit("5/minute")
 async def login(
     request: Request,
     response: Response,
