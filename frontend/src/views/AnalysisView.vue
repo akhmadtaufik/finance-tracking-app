@@ -20,6 +20,7 @@ const breakdown = ref([])
 const summary = ref({ total_income: 0, total_expense: 0, net: 0, transaction_count: 0 })
 const loading = ref(false)
 const transactionType = ref('EXPENSE')
+const groupBy = ref('category')
 
 const dateRange = computed(() => {
   const date = selectedDate.value
@@ -111,8 +112,12 @@ const fetchData = async () => {
   try {
     const { start, end } = dateRange.value
     
+    const breakdownEndpoint = groupBy.value === 'category'
+      ? '/analytics/category-breakdown'
+      : '/analytics/wallet-breakdown'
+    
     const [breakdownRes, summaryRes] = await Promise.all([
-      api.get('/analytics/category-breakdown', {
+      api.get(breakdownEndpoint, {
         params: { start_date: start, end_date: end, type: transactionType.value }
       }),
       api.get('/analytics/period-summary', {
@@ -137,7 +142,7 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-watch([period, selectedDate, transactionType], () => {
+watch([period, selectedDate, transactionType, groupBy], () => {
   fetchData()
 })
 
@@ -226,6 +231,35 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Group By Toggle -->
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-sm font-medium text-gray-600">Group by:</span>
+      <div class="flex rounded-lg overflow-hidden border border-gray-200">
+        <button
+          @click="groupBy = 'category'"
+          :class="[
+            'px-4 py-2 text-sm font-medium transition-colors',
+            groupBy === 'category' 
+              ? 'bg-indigo-600 text-white' 
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          ]"
+        >
+          Category
+        </button>
+        <button
+          @click="groupBy = 'wallet'"
+          :class="[
+            'px-4 py-2 text-sm font-medium transition-colors',
+            groupBy === 'wallet' 
+              ? 'bg-indigo-600 text-white' 
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          ]"
+        >
+          Wallet
+        </button>
+      </div>
+    </div>
+
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-white rounded-lg shadow p-4">
@@ -252,7 +286,7 @@ onMounted(() => {
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-800">
-          {{ transactionType === 'EXPENSE' ? 'Expense' : 'Income' }} by Category
+          {{ transactionType === 'EXPENSE' ? 'Expense' : 'Income' }} by {{ groupBy === 'category' ? 'Category' : 'Wallet' }}
         </h2>
         <p class="text-sm text-gray-500">
           Total: <span class="font-semibold">{{ formatCurrency(totalAmount) }}</span>
