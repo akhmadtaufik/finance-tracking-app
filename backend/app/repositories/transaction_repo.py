@@ -60,40 +60,45 @@ class TransactionRepository:
     async def get_by_user(
         self,
         user_id: int,
-        limit: int = 50,
+        limit: int = 10,
         offset: int = 0,
-        trans_type: Optional[str] = None
+        trans_type: Optional[str] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None
     ) -> List[dict]:
+        # Check if date filter is active
+        has_date_filter = start_date is not None and end_date is not None
+        
+        base_query = """
+            SELECT t.id, t.user_id, t.wallet_id, t.category_id, t.amount, t.type,
+                   t.transaction_date, t.description, t.created_at,
+                   c.name as category_name, w.name as wallet_name
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            JOIN wallets w ON t.wallet_id = w.id
+            WHERE t.user_id = $1
+        """
+        params = [user_id]
+        param_idx = 2
+        
         if trans_type:
-            rows = await self.conn.fetch(
-                """
-                SELECT t.id, t.user_id, t.wallet_id, t.category_id, t.amount, t.type,
-                       t.transaction_date, t.description, t.created_at,
-                       c.name as category_name, w.name as wallet_name
-                FROM transactions t
-                JOIN categories c ON t.category_id = c.id
-                JOIN wallets w ON t.wallet_id = w.id
-                WHERE t.user_id = $1 AND t.type = $2
-                ORDER BY t.transaction_date DESC, t.created_at DESC
-                LIMIT $3 OFFSET $4
-                """,
-                user_id, trans_type, limit, offset
-            )
+            base_query += f" AND t.type = ${param_idx}"
+            params.append(trans_type)
+            param_idx += 1
+        
+        if has_date_filter:
+            # Scenario A: Date filter active - fetch ALL matching rows (no LIMIT)
+            base_query += f" AND t.transaction_date >= ${param_idx} AND t.transaction_date <= ${param_idx + 1}"
+            params.extend([start_date, end_date])
+            base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
+            # NO LIMIT - return all transactions in date range
         else:
-            rows = await self.conn.fetch(
-                """
-                SELECT t.id, t.user_id, t.wallet_id, t.category_id, t.amount, t.type,
-                       t.transaction_date, t.description, t.created_at,
-                       c.name as category_name, w.name as wallet_name
-                FROM transactions t
-                JOIN categories c ON t.category_id = c.id
-                JOIN wallets w ON t.wallet_id = w.id
-                WHERE t.user_id = $1
-                ORDER BY t.transaction_date DESC, t.created_at DESC
-                LIMIT $2 OFFSET $3
-                """,
-                user_id, limit, offset
-            )
+            # Scenario B: No date filter - apply LIMIT for recent transactions
+            base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
+            base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
+            params.extend([limit, offset])
+        
+        rows = await self.conn.fetch(base_query, *params)
         return [dict(row) for row in rows]
 
     async def get_summary(self, user_id: int) -> dict:
