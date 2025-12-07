@@ -7,7 +7,7 @@ import asyncpg
 
 from ..core.database import get_db_conn
 from ..core.security import get_current_user
-from ..schemas.transaction import TransactionCreate, TransactionResponse
+from ..schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
 from ..repositories.transaction_repo import TransactionRepository
 from ..repositories.wallet_repo import WalletRepository
 from ..repositories.category_repo import CategoryRepository
@@ -172,6 +172,82 @@ async def get_summary(
         "total_balance": float(total_balance),
         "net": float(summary["total_income"] - summary["total_expense"])
     }
+
+
+@router.put(
+    "/{transaction_id}",
+    response_model=TransactionResponse,
+    summary="Update Transaction",
+    description="""
+Update an existing transaction with safe balance correction.
+
+**Balance Handling:**
+- Uses atomic "Revert & Apply" strategy
+- Reverts the old transaction's effect on wallet balance
+- Applies the new values' effect on wallet balance
+- Handles wallet changes correctly (e.g., switching from Cash to Bank)
+    """,
+    responses={
+        200: {"description": "Transaction updated successfully"},
+        400: {"description": "Invalid data or insufficient balance"},
+        403: {"description": "Category not accessible"},
+        404: {"description": "Transaction, wallet, or category not found"}
+    }
+)
+async def update_transaction(
+    transaction_id: int,
+    trans_data: TransactionUpdate,
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn)
+):
+    wallet_repo = WalletRepository(conn)
+    category_repo = CategoryRepository(conn)
+    trans_repo = TransactionRepository(conn)
+    
+    # Validate wallet if provided
+    if trans_data.wallet_id is not None:
+        wallet = await wallet_repo.get_by_id(trans_data.wallet_id, current_user["id"])
+        if not wallet:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found")
+    
+    # Validate category if provided
+    if trans_data.category_id is not None:
+        category = await category_repo.get_by_id(trans_data.category_id)
+        if not category:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+        if category["user_id"] is not None and category["user_id"] != current_user["id"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Category not accessible")
+        # Validate category type matches transaction type if both provided
+        if trans_data.type is not None and category["type"] != trans_data.type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})"
+            )
+    
+    try:
+        transaction = await trans_repo.update(
+            transaction_id=transaction_id,
+            user_id=current_user["id"],
+            wallet_id=trans_data.wallet_id,
+            category_id=trans_data.category_id,
+            amount=trans_data.amount,
+            trans_type=trans_data.type,
+            transaction_date=trans_data.transaction_date,
+            description=trans_data.description
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    
+    if not transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    
+    # Fetch category and wallet names for response
+    cat = await category_repo.get_by_id(transaction["category_id"])
+    wal = await wallet_repo.get_by_id(transaction["wallet_id"], current_user["id"])
+    transaction["category_name"] = cat["name"] if cat else None
+    transaction["wallet_name"] = wal["name"] if wal else None
+    
+    return transaction
 
 
 @router.delete(
