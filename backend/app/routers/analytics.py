@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 from datetime import date, datetime
+from calendar import monthrange
 import asyncpg
 
 from ..core.database import get_db_conn
@@ -125,4 +126,74 @@ async def get_daily_totals(
             "total": float(item["total"])
         }
         for item in totals
+    ]
+
+
+@router.get("/trend")
+async def get_cash_flow_trend(
+    start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn)
+):
+    """Get daily income/expense trend for line chart visualization."""
+    analytics_repo = AnalyticsRepository(conn)
+    
+    start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    
+    trend = await analytics_repo.get_cash_flow_trend(
+        current_user["id"],
+        start,
+        end
+    )
+    
+    return [
+        {
+            "day": item["day"].isoformat(),
+            "type": item["type"],
+            "total": float(item["total"])
+        }
+        for item in trend
+    ]
+
+
+@router.get("/comparison")
+async def get_monthly_comparison(
+    month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
+    year: int = Query(..., ge=2000, le=2100, description="Year"),
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn)
+):
+    """Compare expenses between selected month and previous month."""
+    analytics_repo = AnalyticsRepository(conn)
+    
+    # Current month range
+    current_start = date(year, month, 1)
+    current_end = date(year, month, monthrange(year, month)[1])
+    
+    # Previous month range (handle year rollover)
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+    
+    prev_start = date(prev_year, prev_month, 1)
+    prev_end = date(prev_year, prev_month, monthrange(prev_year, prev_month)[1])
+    
+    comparison = await analytics_repo.get_monthly_comparison(
+        current_user["id"],
+        current_start,
+        current_end,
+        prev_start,
+        prev_end
+    )
+    
+    return [
+        {
+            "category": item["category"],
+            "current_total": float(item["current_total"]),
+            "prev_total": float(item["prev_total"])
+        }
+        for item in comparison
     ]
