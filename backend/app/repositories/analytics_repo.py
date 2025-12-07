@@ -32,6 +32,32 @@ class AnalyticsRepository:
         )
         return [dict(row) for row in rows]
 
+    async def get_wallet_breakdown(
+        self,
+        user_id: int,
+        start_date: date,
+        end_date: date,
+        trans_type: str = "EXPENSE"
+    ) -> List[dict]:
+        rows = await self.conn.fetch(
+            """
+            SELECT w.name, w.icon, SUM(t.amount) as total
+            FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1
+              AND t.type = $2
+              AND t.transaction_date >= $3
+              AND t.transaction_date <= $4
+              AND LOWER(c.name) <> 'transfer'
+            GROUP BY w.id, w.name, w.icon
+            HAVING SUM(t.amount) > 0
+            ORDER BY total DESC
+            """,
+            user_id, trans_type, start_date, end_date
+        )
+        return [dict(row) for row in rows]
+
     async def get_daily_totals(
         self,
         user_id: int,
