@@ -8,15 +8,20 @@ import {
   addWeeks, subWeeks,
   addMonths, subMonths,
   addYears, subYears,
-  format
+  format,
+  getMonth, getYear
 } from 'date-fns'
 import { id } from 'date-fns/locale'
 import api from '../api'
 import HorizontalBarChart from '../components/charts/HorizontalBarChart.vue'
+import CashFlowLineChart from '../components/charts/CashFlowLineChart.vue'
+import ComparativeChart from '../components/charts/ComparativeChart.vue'
 
 const period = ref('month')
 const selectedDate = ref(new Date())
 const breakdown = ref([])
+const trendData = ref([])
+const comparisonData = ref([])
 const summary = ref({ total_income: 0, total_expense: 0, net: 0, transaction_count: 0 })
 const loading = ref(false)
 const transactionType = ref('EXPENSE')
@@ -116,17 +121,34 @@ const fetchData = async () => {
       ? '/analytics/category-breakdown'
       : '/analytics/wallet-breakdown'
     
-    const [breakdownRes, summaryRes] = await Promise.all([
+    const [breakdownRes, summaryRes, trendRes] = await Promise.all([
       api.get(breakdownEndpoint, {
         params: { start_date: start, end_date: end, type: transactionType.value }
       }),
       api.get('/analytics/period-summary', {
+        params: { start_date: start, end_date: end }
+      }),
+      api.get('/analytics/trend', {
         params: { start_date: start, end_date: end }
       })
     ])
     
     breakdown.value = breakdownRes.data
     summary.value = summaryRes.data
+    trendData.value = trendRes.data
+    
+    // Fetch comparison data only for monthly view
+    if (period.value === 'month') {
+      const compRes = await api.get('/analytics/comparison', {
+        params: {
+          month: getMonth(selectedDate.value) + 1,
+          year: getYear(selectedDate.value)
+        }
+      })
+      comparisonData.value = compRes.data
+    } else {
+      comparisonData.value = []
+    }
   } catch (error) {
     console.error('Failed to fetch analytics:', error)
   } finally {
@@ -340,6 +362,54 @@ onMounted(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Cash Flow Trend Chart -->
+    <div class="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Cash Flow Trend</h2>
+      <p class="text-sm text-gray-500 mb-4">Income vs Expense over time</p>
+      
+      <div v-if="loading" class="flex items-center justify-center h-72">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+      
+      <div v-else-if="trendData.length === 0" class="flex flex-col items-center justify-center h-72 text-gray-500">
+        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+        </svg>
+        <p>No transaction data for this period</p>
+      </div>
+      
+      <CashFlowLineChart
+        v-else
+        :data="trendData"
+        :start-date="dateRange.start"
+        :end-date="dateRange.end"
+      />
+    </div>
+
+    <!-- Monthly Comparison Chart (only for month view) -->
+    <div v-if="period === 'month'" class="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">Monthly Comparison</h2>
+      <p class="text-sm text-gray-500 mb-4">This month vs last month expenses by category</p>
+      
+      <div v-if="loading" class="flex items-center justify-center h-80">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+      
+      <div v-else-if="comparisonData.length === 0" class="flex flex-col items-center justify-center h-80 text-gray-500">
+        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <p>No comparison data available</p>
+      </div>
+      
+      <ComparativeChart
+        v-else
+        :data="comparisonData"
+        :current-label="format(selectedDate, 'MMM yyyy', { locale: id })"
+        :prev-label="format(subMonths(selectedDate, 1), 'MMM yyyy', { locale: id })"
+      />
     </div>
   </div>
 </template>
