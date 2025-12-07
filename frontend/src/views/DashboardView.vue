@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import SummaryCard from '../components/SummaryCard.vue'
 import EditTransactionModal from '../components/EditTransactionModal.vue'
+import WalletCard from '../components/WalletCard.vue'
 
 const financeStore = useFinanceStore()
 
@@ -149,15 +150,12 @@ const groupedTransactions = computed(() => {
         <h2 class="text-lg font-semibold text-gray-800">Wallets</h2>
       </div>
       <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div 
-            v-for="wallet in financeStore.wallets" 
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <WalletCard
+            v-for="wallet in financeStore.wallets"
             :key="wallet.id"
-            class="border rounded-lg p-4"
-          >
-            <p class="text-sm text-gray-500">{{ wallet.name }}</p>
-            <p class="text-xl font-bold text-gray-800">{{ formatCurrency(wallet.balance) }}</p>
-          </div>
+            :wallet="wallet"
+          />
         </div>
         <p v-if="financeStore.wallets.length === 0" class="text-gray-500 text-center py-4">
           No wallets found
@@ -210,20 +208,20 @@ const groupedTransactions = computed(() => {
             </div>
 
             <!-- Transaction Items -->
-            <div class="border border-t-0 border-gray-200 rounded-b-lg divide-y divide-gray-100">
+            <div class="border border-t-0 border-gray-200 rounded-b-lg">
               <div 
                 v-for="trans in group.transactions" 
                 :key="trans.id"
-                class="px-4 py-3 flex items-center justify-between hover:bg-gray-50"
+                class="grid grid-cols-12 gap-4 items-center px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
               >
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                  <!-- Category Badge -->
+                <!-- Category Badge - col-span-3 -->
+                <div class="col-span-3">
                   <span 
-                    class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1 shrink-0"
+                    class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
                     :class="getCategoryBadgeClass(trans)"
                   >
                     <template v-if="isTransferCategory(trans.category_name)">
-                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
                       </svg>
                       Transfer
@@ -232,44 +230,50 @@ const groupedTransactions = computed(() => {
                       {{ trans.category_name }}
                     </template>
                   </span>
-
-                  <!-- Wallet -->
-                  <span class="text-sm text-gray-500 shrink-0">{{ trans.wallet_name }}</span>
-
-                  <!-- Description -->
-                  <span class="text-sm text-gray-600 truncate">{{ trans.description || '-' }}</span>
                 </div>
 
-                <div class="flex items-center gap-4 shrink-0">
-                  <!-- Amount -->
+                <!-- Wallet - col-span-2 -->
+                <div class="col-span-2">
+                  <span class="text-sm text-gray-500">{{ trans.wallet_name }}</span>
+                </div>
+
+                <!-- Description - col-span-4 -->
+                <div class="col-span-4">
+                  <span class="text-sm text-gray-800 font-medium truncate block">
+                    {{ trans.description || '-' }}
+                  </span>
+                </div>
+
+                <!-- Amount - col-span-2 -->
+                <div class="col-span-2 text-right">
                   <span 
-                    class="font-semibold text-sm"
+                    class="font-bold text-sm"
                     :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
                   >
                     {{ trans.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(trans.amount) }}
                   </span>
+                </div>
 
-                  <!-- Actions -->
-                  <div class="flex items-center gap-2">
-                    <button 
-                      @click="handleEdit(trans)"
-                      class="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
-                      title="Edit transaction"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <button 
-                      @click="handleDelete(trans.id)"
-                      class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                      title="Delete transaction"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+                <!-- Actions - col-span-1 -->
+                <div class="col-span-1 flex justify-end gap-1">
+                  <button 
+                    @click="handleEdit(trans)"
+                    class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
+                    title="Edit"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                  <button 
+                    @click="handleDelete(trans.id)"
+                    class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                    title="Delete"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
