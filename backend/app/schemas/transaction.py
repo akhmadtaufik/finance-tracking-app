@@ -43,6 +43,41 @@ class TransactionCreate(BaseModel):
         return v
 
 
+class TransactionUpdate(BaseModel):
+    """Schema for updating an existing transaction."""
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "wallet_id": 2,
+                "category_id": 3,
+                "amount": 200000.00,
+                "type": "EXPENSE",
+                "transaction_date": "2024-12-05",
+                "description": "Updated description"
+            }
+        }
+    )
+    
+    wallet_id: Optional[int] = Field(None, gt=0, description="ID of the wallet")
+    category_id: Optional[int] = Field(None, gt=0, description="ID of the category")
+    amount: Optional[Decimal] = Field(None, gt=0, max_digits=15, decimal_places=2)
+    type: Optional[Literal["INCOME", "EXPENSE"]] = None
+    transaction_date: Optional[date] = None
+    description: Optional[str] = Field(None, max_length=500)
+    
+    @field_validator('description')
+    @classmethod
+    def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
+        """Prevent XSS by stripping HTML tags."""
+        if v:
+            if XSS_PATTERN.search(v):
+                raise ValueError('HTML/Script tags are not allowed in description')
+            sanitized = re.sub(r'<[^>]+>', '', v)
+            return sanitized
+        return v
+
+
 class TransactionResponse(BaseModel):
     """Schema for transaction response with category and wallet names."""
     model_config = ConfigDict(json_schema_extra={
