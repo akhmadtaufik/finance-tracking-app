@@ -3,6 +3,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFinanceStore } from '../stores/finance'
 import CurrencyInput from '../components/CurrencyInput.vue'
+import WalletSelector from '../components/inputs/WalletSelector.vue'
+import CategorySelector from '../components/inputs/CategorySelector.vue'
 
 const router = useRouter()
 const financeStore = useFinanceStore()
@@ -112,32 +114,20 @@ const handleSubmit = async () => {
 
         <!-- Wallet -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Wallet</label>
-          <select
-            v-model="walletId"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option :value="null" disabled>Select a wallet</option>
-            <option v-for="wallet in financeStore.wallets" :key="wallet.id" :value="wallet.id">
-              {{ wallet.name }} ({{ new Intl.NumberFormat('id-ID').format(wallet.balance) }})
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
+          <WalletSelector 
+            :wallets="financeStore.wallets" 
+            v-model="walletId" 
+          />
         </div>
 
         <!-- Category -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-          <select
-            v-model="categoryId"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option :value="null" disabled>Select a category</option>
-            <option v-for="cat in filteredCategories" :key="cat.id" :value="cat.id">
-              {{ cat.name }} {{ cat.is_global ? '(Global)' : '' }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          <CategorySelector 
+            :categories="filteredCategories" 
+            v-model="categoryId" 
+          />
         </div>
 
         <!-- Date -->
