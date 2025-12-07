@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import CurrencyInput from './CurrencyInput.vue'
+import WalletSelector from './inputs/WalletSelector.vue'
+import CategorySelector from './inputs/CategorySelector.vue'
 import api from '../api'
 import { useUIStore } from '../stores/ui'
 
@@ -118,7 +120,7 @@ const formatCurrency = (value) => {
 
 <template>
   <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold text-gray-800">Edit Transaction</h2>
         <button @click="close" class="text-gray-400 hover:text-gray-600">
@@ -172,30 +174,20 @@ const formatCurrency = (value) => {
 
         <!-- Wallet -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Wallet</label>
-          <select
-            v-model="walletId"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option :value="null" disabled>Select a wallet</option>
-            <option v-for="wallet in wallets" :key="wallet.id" :value="wallet.id">
-              {{ wallet.name }} ({{ formatCurrency(wallet.balance) }})
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
+          <WalletSelector 
+            :wallets="wallets" 
+            v-model="walletId" 
+          />
         </div>
 
         <!-- Category -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-          <select
-            v-model="categoryId"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option :value="null" disabled>Select a category</option>
-            <option v-for="cat in filteredCategories" :key="cat.id" :value="cat.id">
-              {{ cat.name }} {{ cat.is_global ? '(Global)' : '' }}
-            </option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          <CategorySelector 
+            :categories="filteredCategories" 
+            v-model="categoryId" 
+          />
         </div>
 
         <!-- Date -->
