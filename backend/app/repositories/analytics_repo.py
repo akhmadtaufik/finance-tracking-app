@@ -101,3 +101,67 @@ class AnalyticsRepository:
             user_id, start_date, end_date
         )
         return dict(row)
+
+    async def get_cash_flow_trend(
+        self,
+        user_id: int,
+        start_date: date,
+        end_date: date
+    ) -> List[dict]:
+        """Fetch daily totals for Income and Expense, excluding Transfer category."""
+        rows = await self.conn.fetch(
+            """
+            SELECT 
+                t.transaction_date::DATE as day, 
+                t.type, 
+                SUM(t.amount) as total
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1
+              AND t.transaction_date >= $2
+              AND t.transaction_date <= $3
+              AND LOWER(c.name) <> 'transfer'
+            GROUP BY day, t.type
+            ORDER BY day ASC
+            """,
+            user_id, start_date, end_date
+        )
+        return [dict(row) for row in rows]
+
+    async def get_monthly_comparison(
+        self,
+        user_id: int,
+        current_start: date,
+        current_end: date,
+        prev_start: date,
+        prev_end: date
+    ) -> List[dict]:
+        """Compare expenses between two months using FILTER clause."""
+        rows = await self.conn.fetch(
+            """
+            SELECT 
+                c.name as category,
+                COALESCE(SUM(t.amount) FILTER (
+                    WHERE t.transaction_date >= $2 AND t.transaction_date <= $3
+                ), 0) as current_total,
+                COALESCE(SUM(t.amount) FILTER (
+                    WHERE t.transaction_date >= $4 AND t.transaction_date <= $5
+                ), 0) as prev_total
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = $1
+              AND t.type = 'EXPENSE'
+              AND LOWER(c.name) <> 'transfer'
+              AND (
+                  (t.transaction_date >= $2 AND t.transaction_date <= $3) OR
+                  (t.transaction_date >= $4 AND t.transaction_date <= $5)
+              )
+            GROUP BY c.name
+            HAVING 
+                SUM(t.amount) FILTER (WHERE t.transaction_date >= $2 AND t.transaction_date <= $3) > 0 OR
+                SUM(t.amount) FILTER (WHERE t.transaction_date >= $4 AND t.transaction_date <= $5) > 0
+            ORDER BY current_total DESC
+            """,
+            user_id, current_start, current_end, prev_start, prev_end
+        )
+        return [dict(row) for row in rows]
