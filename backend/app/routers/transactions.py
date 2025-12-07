@@ -43,7 +43,8 @@ Retrieve all transactions for the authenticated user.
 
 **Filters:**
 - `type`: Filter by `INCOME` or `EXPENSE`
-- `limit`: Maximum results to return (default: 50, max: 100)
+- `start_date` / `end_date`: Date range filter (if provided, returns ALL in range)
+- `limit`: Maximum results to return (default: 10, max: 100) - ignored if date range provided
 - `offset`: Pagination offset for skipping records
     """,
     responses={
@@ -54,7 +55,9 @@ Retrieve all transactions for the authenticated user.
 )
 async def get_transactions(
     type: Optional[str] = Query(default=None, description="Filter by INCOME or EXPENSE"),
-    limit: int = Query(default=50, le=100, description="Max results (default: 50)"),
+    start_date: Optional[date] = Query(default=None, description="Start date for range filter"),
+    end_date: Optional[date] = Query(default=None, description="End date for range filter"),
+    limit: int = Query(default=10, le=100, description="Max results (default: 10, ignored if date range)"),
     offset: int = Query(default=0, ge=0, description="Pagination offset"),
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn)
@@ -69,7 +72,9 @@ async def get_transactions(
         current_user["id"],
         limit=limit,
         offset=offset,
-        trans_type=trans_type
+        trans_type=trans_type,
+        start_date=start_date,
+        end_date=end_date
     )
     return transactions
 
