@@ -4,6 +4,7 @@ import {
   startOfWeek, endOfWeek, 
   startOfMonth, endOfMonth, 
   startOfYear, endOfYear,
+  addDays, subDays,
   addWeeks, subWeeks,
   addMonths, subMonths,
   addYears, subYears,
@@ -25,6 +26,10 @@ const dateRange = computed(() => {
   let start, end
   
   switch (period.value) {
+    case 'daily':
+      start = date
+      end = date
+      break
     case 'week':
       start = startOfWeek(date, { weekStartsOn: 1 })
       end = endOfWeek(date, { weekStartsOn: 1 })
@@ -53,6 +58,8 @@ const dateRange = computed(() => {
 const periodLabel = computed(() => {
   const date = selectedDate.value
   switch (period.value) {
+    case 'daily':
+      return format(date, 'd MMMM yyyy', { locale: id })
     case 'week':
       const weekStart = startOfWeek(date, { weekStartsOn: 1 })
       const weekEnd = endOfWeek(date, { weekStartsOn: 1 })
@@ -80,6 +87,9 @@ const totalAmount = computed(() => {
 const navigate = (direction) => {
   const date = selectedDate.value
   switch (period.value) {
+    case 'daily':
+      selectedDate.value = direction === 'prev' ? subDays(date, 1) : addDays(date, 1)
+      break
     case 'week':
       selectedDate.value = direction === 'prev' ? subWeeks(date, 1) : addWeeks(date, 1)
       break
@@ -146,7 +156,7 @@ onMounted(() => {
         <!-- Period Toggle -->
         <div class="flex rounded-lg overflow-hidden border border-gray-200">
           <button
-            v-for="p in ['week', 'month', 'year']"
+            v-for="p in ['daily', 'week', 'month', 'year']"
             :key="p"
             @click="period = p"
             :class="[
