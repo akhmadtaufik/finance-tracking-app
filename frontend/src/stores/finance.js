@@ -58,6 +58,14 @@ export const useFinanceStore = defineStore('finance', () => {
     return response.data
   }
 
+  async function updateTransaction(id, data) {
+    const response = await api.put(`/transactions/${id}`, data)
+    await fetchTransactions()
+    await fetchSummary()
+    await fetchWallets()
+    return response.data
+  }
+
   async function deleteTransaction(id) {
     await api.delete(`/transactions/${id}`)
     await fetchTransactions()
@@ -77,6 +85,7 @@ export const useFinanceStore = defineStore('finance', () => {
     fetchSummary,
     createTransaction,
     createCategory,
+    updateTransaction,
     deleteTransaction
   }
 })
