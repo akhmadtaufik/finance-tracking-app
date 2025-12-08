@@ -212,72 +212,74 @@ const groupedTransactions = computed(() => {
               <div 
                 v-for="trans in group.transactions" 
                 :key="trans.id"
-                class="grid grid-cols-12 gap-2 md:gap-4 items-center px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                class="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
               >
-                <!-- Category Badge - Hidden on mobile, col-span-2 on desktop -->
-                <div class="hidden md:block md:col-span-3">
-                  <span 
-                    class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
-                    :class="getCategoryBadgeClass(trans)"
-                  >
-                    <template v-if="isTransferCategory(trans.category_name)">
-                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
-                      </svg>
-                      Transfer
-                    </template>
-                    <template v-else>
-                      {{ trans.category_name }}
-                    </template>
-                  </span>
-                </div>
+                <!-- Top Row (Mobile) / Left Side (Desktop): Category & Description -->
+                <div class="flex items-center gap-3 w-full sm:col-span-7">
+                  <!-- Category Badge -->
+                  <div class="flex-shrink-0">
+                    <span 
+                      class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
+                      :class="getCategoryBadgeClass(trans)"
+                    >
+                      <template v-if="isTransferCategory(trans.category_name)">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
+                        </svg>
+                        Transfer
+                      </template>
+                      <template v-else>
+                        {{ trans.category_name }}
+                      </template>
+                    </span>
+                  </div>
 
-                <!-- Wallet - Hidden on mobile, col-span-2 on desktop -->
-                <div class="hidden md:block md:col-span-2">
-                  <span class="text-sm text-gray-500">{{ trans.wallet_name }}</span>
-                </div>
-
-                <!-- Description - col-span-8 on mobile, col-span-4 on desktop -->
-                <div class="col-span-8 md:col-span-4">
-                  <span class="text-sm text-gray-800 font-medium truncate block">
-                    {{ trans.description || '-' }}
-                  </span>
-                  <!-- Mobile only category/wallet info -->
-                  <div class="md:hidden text-xs text-gray-500 truncate mt-0.5">
-                    {{ trans.category_name }} • {{ trans.wallet_name }}
+                  <!-- Description -->
+                  <div class="min-w-0 flex-1">
+                    <span class="text-sm text-gray-800 font-medium truncate block" :title="trans.description">
+                      {{ trans.description || '-' }}
+                    </span>
                   </div>
                 </div>
 
-                <!-- Amount - col-span-3 on mobile, col-span-2 on desktop -->
-                <div class="col-span-3 md:col-span-2 text-right">
-                  <span 
-                    class="font-bold text-sm"
-                    :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
-                  >
-                    {{ trans.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(trans.amount) }}
-                  </span>
-                </div>
+                <!-- Bottom Row (Mobile) / Right Side (Desktop): Wallet, Amount, Actions -->
+                <div class="flex items-center justify-between w-full sm:col-span-5 sm:justify-end sm:gap-4 mt-1 sm:mt-0">
+                  <!-- Wallet Name -->
+                  <div class="text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">
+                    {{ trans.wallet_name }}
+                  </div>
 
-                <!-- Actions - col-span-1 -->
-                <div class="col-span-1 flex justify-end gap-1">
-                  <button 
-                    @click="handleEdit(trans)"
-                    class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
-                    title="Edit"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-                  <button 
-                    @click="handleDelete(trans.id)"
-                    class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                    title="Delete"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div class="flex items-center gap-3">
+                    <!-- Amount -->
+                    <span 
+                      class="font-bold text-sm whitespace-nowrap"
+                      :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
+                    >
+                      {{ trans.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(trans.amount) }}
+                    </span>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button 
+                        @click="handleEdit(trans)"
+                        class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
+                        title="Edit"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button 
+                        @click="handleDelete(trans.id)"
+                        class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
