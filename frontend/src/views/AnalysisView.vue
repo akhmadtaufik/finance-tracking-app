@@ -333,29 +333,32 @@ onMounted(() => {
       />
 
       <!-- Category List -->
-      <div v-if="breakdown.length > 0" class="mt-6 border-t pt-4">
+      <div v-if="breakdown.length > 0" class="mt-6 border-t pt-4 w-full overflow-hidden">
         <div class="space-y-2">
           <div
             v-for="(item, index) in breakdown"
             :key="item.name"
-            class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50"
+            class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 gap-2"
           >
-            <div class="flex items-center gap-3">
-              <span class="w-6 text-center text-sm text-gray-400">{{ index + 1 }}</span>
-              <span class="font-medium text-gray-800">{{ item.name }}</span>
+            <!-- Left Side: Index & Name -->
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <span class="w-6 text-center text-sm text-gray-400 flex-shrink-0">{{ index + 1 }}</span>
+              <span class="font-medium text-gray-800 truncate" :title="item.name">{{ item.name }}</span>
             </div>
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-gray-500 w-12 text-right">
+
+            <!-- Right Side: Stats -->
+            <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <span class="text-sm text-gray-500 w-10 sm:w-12 text-right text-xs sm:text-sm">
                 {{ totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0 }}%
               </span>
-              <div class="w-24 bg-gray-200 rounded-full h-2">
+              <div class="w-12 sm:w-24 bg-gray-200 rounded-full h-2">
                 <div
                   class="h-2 rounded-full"
                   :class="transactionType === 'EXPENSE' ? 'bg-red-500' : 'bg-green-500'"
                   :style="{ width: (totalAmount > 0 ? (item.total / totalAmount) * 100 : 0) + '%' }"
                 ></div>
               </div>
-              <span class="font-semibold text-gray-800 w-32 text-right">
+              <span class="font-semibold text-gray-800 w-24 sm:w-32 text-right whitespace-nowrap text-sm sm:text-base">
                 {{ formatCurrency(item.total) }}
               </span>
             </div>
