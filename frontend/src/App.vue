@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import ToastNotification from './components/ToastNotification.vue'
 import ErrorBoundary from './components/ErrorBoundary.vue'
+import BottomNavigation from './components/BottomNavigation.vue'
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -82,13 +83,13 @@ const isActive = (path) => {
   <a href="#main-content" class="skip-link">Skip to main content</a>
   <ToastNotification />
   <div class="min-h-screen bg-gray-100">
-    <!-- Sidebar -->
+    <!-- Sidebar (Desktop) -->
     <aside
       v-if="showSidebar"
       @mouseenter="sidebarExpanded = true"
       @mouseleave="sidebarExpanded = false"
       :class="[
-        'fixed left-0 top-0 h-full bg-white shadow-lg z-40 transition-all duration-300 ease-in-out flex flex-col',
+        'hidden md:flex fixed left-0 top-0 h-full bg-white shadow-lg z-40 transition-all duration-300 ease-in-out flex-col',
         sidebarExpanded ? 'w-64' : 'w-16',
       ]"
     >
@@ -256,13 +257,16 @@ const isActive = (path) => {
       role="main"
       tabindex="-1"
       :class="[
-        'transition-all duration-300 focus:outline-none',
-        showSidebar ? 'ml-16' : '',
+        'transition-all duration-300 focus:outline-none pt-4 pb-24 md:pb-0',
+        showSidebar ? 'md:ml-16' : '',
       ]"
     >
       <ErrorBoundary>
         <router-view />
       </ErrorBoundary>
     </main>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <BottomNavigation v-if="showSidebar" />
   </div>
 </template>

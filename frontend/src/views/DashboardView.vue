@@ -122,7 +122,7 @@ const groupedTransactions = computed(() => {
     <h1 class="text-2xl font-bold text-gray-800 mb-8">Dashboard</h1>
     
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
       <SummaryCard
         title="Total Balance"
         :amount="financeStore.summary.total_balance || 0"
@@ -150,7 +150,7 @@ const groupedTransactions = computed(() => {
         <h2 class="text-lg font-semibold text-gray-800">Wallets</h2>
       </div>
       <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <WalletCard
             v-for="wallet in financeStore.wallets"
             :key="wallet.id"
@@ -212,10 +212,10 @@ const groupedTransactions = computed(() => {
               <div 
                 v-for="trans in group.transactions" 
                 :key="trans.id"
-                class="grid grid-cols-12 gap-4 items-center px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                class="grid grid-cols-12 gap-2 md:gap-4 items-center px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
               >
-                <!-- Category Badge - col-span-3 -->
-                <div class="col-span-3">
+                <!-- Category Badge - Hidden on mobile, col-span-2 on desktop -->
+                <div class="hidden md:block md:col-span-3">
                   <span 
                     class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
                     :class="getCategoryBadgeClass(trans)"
@@ -232,20 +232,24 @@ const groupedTransactions = computed(() => {
                   </span>
                 </div>
 
-                <!-- Wallet - col-span-2 -->
-                <div class="col-span-2">
+                <!-- Wallet - Hidden on mobile, col-span-2 on desktop -->
+                <div class="hidden md:block md:col-span-2">
                   <span class="text-sm text-gray-500">{{ trans.wallet_name }}</span>
                 </div>
 
-                <!-- Description - col-span-4 -->
-                <div class="col-span-4">
+                <!-- Description - col-span-8 on mobile, col-span-4 on desktop -->
+                <div class="col-span-8 md:col-span-4">
                   <span class="text-sm text-gray-800 font-medium truncate block">
                     {{ trans.description || '-' }}
                   </span>
+                  <!-- Mobile only category/wallet info -->
+                  <div class="md:hidden text-xs text-gray-500 truncate mt-0.5">
+                    {{ trans.category_name }} • {{ trans.wallet_name }}
+                  </div>
                 </div>
 
-                <!-- Amount - col-span-2 -->
-                <div class="col-span-2 text-right">
+                <!-- Amount - col-span-3 on mobile, col-span-2 on desktop -->
+                <div class="col-span-3 md:col-span-2 text-right">
                   <span 
                     class="font-bold text-sm"
                     :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"

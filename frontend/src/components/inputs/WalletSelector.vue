@@ -40,7 +40,7 @@ const getWalletInitials = (name) => name.substring(0, 3).toUpperCase()
       type="button"
       @click="selectWallet(wallet.id)"
       :class="[
-        'p-4 rounded-xl text-left transition-all duration-150 cursor-pointer',
+        'p-3 rounded-xl text-left transition-all duration-150 cursor-pointer',
         modelValue === wallet.id
           ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 shadow-md'
           : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
@@ -54,7 +54,7 @@ const getWalletInitials = (name) => name.substring(0, 3).toUpperCase()
           {{ getWalletInitials(wallet.name) }}
         </div>
         <div class="min-w-0">
-          <p class="font-medium text-gray-800 truncate">{{ wallet.name }}</p>
+          <p class="text-sm font-semibold text-gray-800 truncate">{{ wallet.name }}</p>
           <p class="text-sm text-gray-500">{{ formatCurrency(wallet.balance) }}</p>
         </div>
       </div>
