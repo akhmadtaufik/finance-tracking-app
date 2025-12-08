@@ -127,6 +127,7 @@ const handleSubmit = async () => {
           <CategorySelector 
             :categories="filteredCategories" 
             v-model="categoryId" 
+            :current-type="type"
           />
         </div>
 
