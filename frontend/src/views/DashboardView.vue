@@ -20,14 +20,27 @@ const getLocalToday = () => {
 
 const filterDate = ref(getLocalToday())
 
+const getPastDate = (daysAgo) => {
+  const date = new Date()
+  date.setDate(date.getDate() - daysAgo)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const isDefaultView = ref(true)
+
 const isToday = computed(() => filterDate.value === getLocalToday())
 
 onMounted(async () => {
   const today = getLocalToday()
+  const fiveDaysAgo = getPastDate(4) // Today + 4 days back = 5 days total
+
   await Promise.all([
     financeStore.fetchWallets(),
     financeStore.fetchTransactions({
-      start_date: today,
+      start_date: fiveDaysAgo,
       end_date: today
     }),
     financeStore.fetchSummary(),
@@ -70,20 +83,23 @@ const handleDelete = async (id) => {
 
 const handleDateFilter = async () => {
   if (filterDate.value) {
+    isDefaultView.value = false
     await financeStore.fetchTransactions({
       start_date: filterDate.value,
       end_date: filterDate.value
     })
   } else {
-    await financeStore.fetchTransactions({ limit: 10 })
+    await resetView()
   }
 }
 
-const clearFilter = async () => {
+const resetView = async () => {
   const today = getLocalToday()
+  const fiveDaysAgo = getPastDate(4)
   filterDate.value = today
+  isDefaultView.value = true
   await financeStore.fetchTransactions({
-    start_date: today,
+    start_date: fiveDaysAgo,
     end_date: today
   })
 }
@@ -167,7 +183,7 @@ const groupedTransactions = computed(() => {
     <div class="bg-white rounded-lg shadow">
       <div class="px-6 py-4 border-b flex flex-wrap justify-between items-center gap-4">
         <h2 class="text-lg font-semibold text-gray-800">
-          {{ isToday ? 'Transactions for Today' : `Transactions for ${formatDateHeader(filterDate)}` }}
+          {{ isDefaultView ? 'Recent Transactions (Last 5 Days)' : `Transactions for ${formatDateHeader(filterDate)}` }}
         </h2>
         <div class="flex items-center gap-3">
           <input 
@@ -177,11 +193,11 @@ const groupedTransactions = computed(() => {
             class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button 
-            v-if="!isToday"
-            @click="clearFilter"
+            v-if="!isDefaultView"
+            @click="resetView"
             class="text-sm text-gray-500 hover:text-gray-700"
           >
-            Back to Today
+            Show Recent
           </button>
           <router-link 
             to="/transactions/add" 
@@ -288,7 +304,7 @@ const groupedTransactions = computed(() => {
 
         <!-- Empty State -->
         <p v-else class="text-gray-500 text-center py-8">
-          {{ isToday ? 'No transactions for today. Start by adding one!' : 'No transactions for this date.' }}
+          {{ isDefaultView ? 'No recent transactions. Start by adding one!' : 'No transactions for this date.' }}
         </p>
       </div>
     </div>
