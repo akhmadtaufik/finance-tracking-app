@@ -17,25 +17,22 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://localhost"
+        "http://localhost",
     ]
     COOKIE_SECURE: bool = True
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     RATE_LIMIT_ENABLED: bool = True
-    
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "extra": "ignore"
-    }
-    
+    GOOGLE_API_KEY: str
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, value: str) -> str:
         if not value or len(value) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long")
         return value
-    
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value):
@@ -44,7 +41,7 @@ class Settings(BaseSettings):
                 return json.loads(value)
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
-    
+
     @field_validator("COOKIE_SAMESITE", mode="before")
     @classmethod
     def normalize_samesite(cls, value: str) -> str:
@@ -54,7 +51,7 @@ class Settings(BaseSettings):
         if normalized not in {"lax", "strict", "none"}:
             raise ValueError("COOKIE_SAMESITE must be one of: lax, strict, none")
         return normalized
-    
+
     @field_validator("COOKIE_SECURE", mode="before")
     @classmethod
     def enforce_cookie_secure_default(cls, value):
