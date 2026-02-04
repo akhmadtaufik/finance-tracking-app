@@ -27,6 +27,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/scan-receipt',
+    name: 'ScanReceipt',
+    component: () => import('../views/ScanReceiptView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/wallets',
     name: 'Wallets',
     component: () => import('../views/WalletsView.vue'),
@@ -81,7 +87,7 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
-  
+
   if (to.meta.requiresAuth && !token) {
     next('/login')
   } else if (!to.meta.requiresAuth && token && (to.name === 'Login' || to.name === 'Register')) {

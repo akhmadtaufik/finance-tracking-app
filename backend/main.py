@@ -17,9 +17,18 @@ from backend.app.core.exceptions import (
     asyncpg_fk_violation_handler,
     asyncpg_not_null_violation_handler,
     validation_error_handler,
-    global_exception_handler
+    global_exception_handler,
 )
-from backend.app.routers import auth_router, wallets_router, categories_router, transactions_router, analytics_router, reports_router, admin_router
+from backend.app.routers import (
+    auth_router,
+    wallets_router,
+    categories_router,
+    transactions_router,
+    analytics_router,
+    reports_router,
+    admin_router,
+    receipts_router,
+)
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -51,7 +60,7 @@ All endpoints (except `/auth/*`) require a valid JWT token in the `Authorization
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 app.state.limiter = limiter
@@ -72,9 +81,15 @@ app.add_middleware(
 
 # Exception Handlers
 app.add_exception_handler(AppException, app_exception_handler)
-app.add_exception_handler(asyncpg.UniqueViolationError, asyncpg_unique_violation_handler)
-app.add_exception_handler(asyncpg.ForeignKeyViolationError, asyncpg_fk_violation_handler)
-app.add_exception_handler(asyncpg.NotNullViolationError, asyncpg_not_null_violation_handler)
+app.add_exception_handler(
+    asyncpg.UniqueViolationError, asyncpg_unique_violation_handler
+)
+app.add_exception_handler(
+    asyncpg.ForeignKeyViolationError, asyncpg_fk_violation_handler
+)
+app.add_exception_handler(
+    asyncpg.NotNullViolationError, asyncpg_not_null_violation_handler
+)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
@@ -83,8 +98,9 @@ app.add_exception_handler(Exception, global_exception_handler)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        content={"detail": "Rate limit exceeded"}
+        content={"detail": "Rate limit exceeded"},
     )
+
 
 app.include_router(auth_router)
 app.include_router(wallets_router)
@@ -93,6 +109,7 @@ app.include_router(transactions_router)
 app.include_router(analytics_router)
 app.include_router(reports_router)
 app.include_router(admin_router)
+app.include_router(receipts_router)
 
 
 @app.get("/")

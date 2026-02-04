@@ -7,7 +7,11 @@ import asyncpg
 
 from ..core.database import get_db_conn
 from ..core.security import get_current_user
-from ..schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
+from ..schemas.transaction import (
+    TransactionCreate,
+    TransactionUpdate,
+    TransactionResponse,
+)
 from ..repositories.transaction_repo import TransactionRepository
 from ..repositories.wallet_repo import WalletRepository
 from ..repositories.category_repo import CategoryRepository
@@ -17,16 +21,19 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 class TransferRequest(BaseModel):
     """Schema for wallet-to-wallet transfer request."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "source_wallet_id": 1,
-            "dest_wallet_id": 2,
-            "amount": 500000.00,
-            "transaction_date": "2024-12-01",
-            "description": "Transfer ke dompet darurat"
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_wallet_id": 1,
+                "dest_wallet_id": 2,
+                "amount": 500000.00,
+                "transaction_date": "2024-12-01",
+                "description": "Transfer ke dompet darurat",
+            }
         }
-    })
-    
+    )
+
     source_wallet_id: int
     dest_wallet_id: int
     amount: Decimal
@@ -50,31 +57,41 @@ Retrieve all transactions for the authenticated user.
     responses={
         200: {"description": "List of transactions"},
         401: {"description": "Not authenticated"},
-        500: {"description": "Internal server error"}
-    }
+        500: {"description": "Internal server error"},
+    },
 )
 async def get_transactions(
-    type: Optional[str] = Query(default=None, description="Filter by INCOME or EXPENSE"),
-    start_date: Optional[date] = Query(default=None, description="Start date for range filter"),
-    end_date: Optional[date] = Query(default=None, description="End date for range filter"),
-    limit: int = Query(default=10, le=100, description="Max results (default: 10, ignored if date range)"),
+    type: Optional[str] = Query(
+        default=None, description="Filter by INCOME or EXPENSE"
+    ),
+    start_date: Optional[date] = Query(
+        default=None, description="Start date for range filter"
+    ),
+    end_date: Optional[date] = Query(
+        default=None, description="End date for range filter"
+    ),
+    limit: int = Query(
+        default=10,
+        le=100,
+        description="Max results (default: 10, ignored if date range)",
+    ),
     offset: int = Query(default=0, ge=0, description="Pagination offset"),
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     trans_repo = TransactionRepository(conn)
-    
+
     trans_type = None
     if type and type.upper() in ["INCOME", "EXPENSE"]:
         trans_type = type.upper()
-    
+
     transactions = await trans_repo.get_by_user(
         current_user["id"],
         limit=limit,
         offset=offset,
         trans_type=trans_type,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
     )
     return transactions
 
@@ -90,38 +107,44 @@ async def get_transactions(
         400: {"description": "Category type mismatch with transaction type"},
         403: {"description": "Category not accessible"},
         404: {"description": "Wallet or Category not found"},
-        409: {"description": "Duplicate transaction"}
-    }
+        409: {"description": "Duplicate transaction"},
+    },
 )
 async def create_transaction(
     trans_data: TransactionCreate,
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     wallet_repo = WalletRepository(conn)
     category_repo = CategoryRepository(conn)
     trans_repo = TransactionRepository(conn)
-    
+
     # Verify wallet belongs to user
     wallet = await wallet_repo.get_by_id(trans_data.wallet_id, current_user["id"])
     if not wallet:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found"
+        )
+
     # Verify category exists and is accessible to user
     category = await category_repo.get_by_id(trans_data.category_id)
     if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
+        )
+
     if category["user_id"] is not None and category["user_id"] != current_user["id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Category not accessible")
-    
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Category not accessible"
+        )
+
     # Validate category type matches transaction type
     if category["type"] != trans_data.type:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})"
+            detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})",
         )
-    
+
     try:
         transaction = await trans_repo.create(
             user_id=current_user["id"],
@@ -130,15 +153,17 @@ async def create_transaction(
             amount=trans_data.amount,
             trans_type=trans_data.type,
             transaction_date=trans_data.transaction_date or date.today(),
-            description=trans_data.description
+            description=trans_data.description,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
     # Add category and wallet names to response
     transaction["category_name"] = category["name"]
     transaction["wallet_name"] = wallet["name"]
-    
+
     return transaction
 
 
@@ -156,26 +181,26 @@ Get a summary of the user's financial status.
     """,
     responses={
         200: {"description": "Financial summary"},
-        401: {"description": "Not authenticated"}
-    }
+        401: {"description": "Not authenticated"},
+    },
 )
 async def get_summary(
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     trans_repo = TransactionRepository(conn)
     wallet_repo = WalletRepository(conn)
-    
+
     summary = await trans_repo.get_summary(current_user["id"])
     wallets = await wallet_repo.get_by_user(current_user["id"])
-    
+
     total_balance = sum(w["balance"] for w in wallets)
-    
+
     return {
         "total_income": float(summary["total_income"]),
         "total_expense": float(summary["total_expense"]),
         "total_balance": float(total_balance),
-        "net": float(summary["total_income"] - summary["total_expense"])
+        "net": float(summary["total_income"] - summary["total_expense"]),
     }
 
 
@@ -196,39 +221,48 @@ Update an existing transaction with safe balance correction.
         200: {"description": "Transaction updated successfully"},
         400: {"description": "Invalid data or insufficient balance"},
         403: {"description": "Category not accessible"},
-        404: {"description": "Transaction, wallet, or category not found"}
-    }
+        404: {"description": "Transaction, wallet, or category not found"},
+    },
 )
 async def update_transaction(
     transaction_id: int,
     trans_data: TransactionUpdate,
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     wallet_repo = WalletRepository(conn)
     category_repo = CategoryRepository(conn)
     trans_repo = TransactionRepository(conn)
-    
+
     # Validate wallet if provided
     if trans_data.wallet_id is not None:
         wallet = await wallet_repo.get_by_id(trans_data.wallet_id, current_user["id"])
         if not wallet:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found")
-    
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found"
+            )
+
     # Validate category if provided
     if trans_data.category_id is not None:
         category = await category_repo.get_by_id(trans_data.category_id)
         if not category:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-        if category["user_id"] is not None and category["user_id"] != current_user["id"]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Category not accessible")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
+            )
+        if (
+            category["user_id"] is not None
+            and category["user_id"] != current_user["id"]
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Category not accessible"
+            )
         # Validate category type matches transaction type if both provided
         if trans_data.type is not None and category["type"] != trans_data.type:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})"
+                detail=f"Category type ({category['type']}) does not match transaction type ({trans_data.type})",
             )
-    
+
     try:
         transaction = await trans_repo.update(
             transaction_id=transaction_id,
@@ -238,20 +272,24 @@ async def update_transaction(
             amount=trans_data.amount,
             trans_type=trans_data.type,
             transaction_date=trans_data.transaction_date,
-            description=trans_data.description
+            description=trans_data.description,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
     if not transaction:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+        )
+
     # Fetch category and wallet names for response
     cat = await category_repo.get_by_id(transaction["category_id"])
     wal = await wallet_repo.get_by_id(transaction["wallet_id"], current_user["id"])
     transaction["category_name"] = cat["name"] if cat else None
     transaction["wallet_name"] = wal["name"] if wal else None
-    
+
     return transaction
 
 
@@ -263,19 +301,21 @@ async def update_transaction(
     responses={
         204: {"description": "Transaction deleted successfully"},
         401: {"description": "Not authenticated"},
-        404: {"description": "Transaction not found"}
-    }
+        404: {"description": "Transaction not found"},
+    },
 )
 async def delete_transaction(
     transaction_id: int,
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     trans_repo = TransactionRepository(conn)
     deleted = await trans_repo.delete(transaction_id, current_user["id"])
-    
+
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+        )
 
 
 @router.post(
@@ -293,55 +333,57 @@ Transfer funds between two wallets owned by the authenticated user.
     """,
     responses={
         201: {"description": "Transfer completed successfully"},
-        400: {"description": "Invalid transfer (same wallet, insufficient balance, or amount <= 0)"},
-        404: {"description": "Source or destination wallet not found"}
-    }
+        400: {
+            "description": "Invalid transfer (same wallet, insufficient balance, or amount <= 0)"
+        },
+        404: {"description": "Source or destination wallet not found"},
+    },
 )
 async def transfer_funds(
     data: TransferRequest,
     current_user: dict = Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     wallet_repo = WalletRepository(conn)
     trans_repo = TransactionRepository(conn)
-    
+
     # Validate source != destination
     if data.source_wallet_id == data.dest_wallet_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Source and destination wallets must be different"
+            detail="Source and destination wallets must be different",
         )
-    
+
     # Validate amount > 0
     if data.amount <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Amount must be greater than 0"
+            detail="Amount must be greater than 0",
         )
-    
+
     # Verify source wallet belongs to user
-    source_wallet = await wallet_repo.get_by_id(data.source_wallet_id, current_user["id"])
+    source_wallet = await wallet_repo.get_by_id(
+        data.source_wallet_id, current_user["id"]
+    )
     if not source_wallet:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Source wallet not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Source wallet not found"
         )
-    
+
     # Verify destination wallet belongs to user
     dest_wallet = await wallet_repo.get_by_id(data.dest_wallet_id, current_user["id"])
     if not dest_wallet:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Destination wallet not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Destination wallet not found"
         )
-    
+
     # Check sufficient balance
     if source_wallet["balance"] < data.amount:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Insufficient balance in source wallet"
+            detail="Insufficient balance in source wallet",
         )
-    
+
     # Perform transfer
     try:
         result = await trans_repo.transfer_funds(
@@ -350,14 +392,119 @@ async def transfer_funds(
             dest_wallet_id=data.dest_wallet_id,
             amount=data.amount,
             transaction_date=data.transaction_date or date.today(),
-            description=data.description
+            description=data.description,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
     return {
         "message": "Transfer successful",
         "amount": result["amount"],
         "source_wallet": source_wallet["name"],
-        "dest_wallet": dest_wallet["name"]
+        "dest_wallet": dest_wallet["name"],
     }
+
+
+@router.post(
+    "/batch",
+    response_model=List[TransactionResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Batch Create Transactions",
+    description="""
+Create multiple transactions in a single atomic operation.
+
+**Use Case:** Save scanned receipt items as transactions.
+
+**Important:**
+- All transactions are created within a database transaction
+- If any transaction fails, none are committed
+- Each item is validated the same as single create
+    """,
+    responses={
+        201: {"description": "All transactions created successfully"},
+        400: {"description": "Validation error on one or more transactions"},
+        404: {"description": "Wallet or category not found"},
+    },
+)
+async def batch_create_transactions(
+    transactions_data: List[TransactionCreate],
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+):
+    """Create multiple transactions atomically."""
+    if not transactions_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transaction list cannot be empty",
+        )
+
+    wallet_repo = WalletRepository(conn)
+    category_repo = CategoryRepository(conn)
+    trans_repo = TransactionRepository(conn)
+
+    created_transactions = []
+
+    # Use a single database transaction for atomicity
+    async with conn.transaction():
+        for idx, trans_data in enumerate(transactions_data):
+            # Verify wallet belongs to user
+            wallet = await wallet_repo.get_by_id(
+                trans_data.wallet_id, current_user["id"]
+            )
+            if not wallet:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Item {idx + 1}: Wallet not found",
+                )
+
+            # Verify category exists and is accessible
+            category = await category_repo.get_by_id(trans_data.category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Item {idx + 1}: Category not found",
+                )
+
+            if (
+                category["user_id"] is not None
+                and category["user_id"] != current_user["id"]
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Item {idx + 1}: Category not accessible",
+                )
+
+            # Validate category type matches transaction type
+            if category["type"] != trans_data.type:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Item {idx + 1}: Category type ({category['type']}) "
+                        f"does not match transaction type ({trans_data.type})"
+                    ),
+                )
+
+            try:
+                transaction = await trans_repo.create(
+                    user_id=current_user["id"],
+                    wallet_id=trans_data.wallet_id,
+                    category_id=trans_data.category_id,
+                    amount=trans_data.amount,
+                    trans_type=trans_data.type,
+                    transaction_date=trans_data.transaction_date or date.today(),
+                    description=trans_data.description,
+                )
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Item {idx + 1}: {str(exc)}",
+                ) from exc
+
+            # Add category and wallet names
+            transaction["category_name"] = category["name"]
+            transaction["wallet_name"] = wallet["name"]
+            created_transactions.append(transaction)
+
+    return created_transactions
