@@ -5,6 +5,7 @@ import { useFinanceStore } from '../stores/finance'
 import CurrencyInput from '../components/CurrencyInput.vue'
 import WalletSelector from '../components/inputs/WalletSelector.vue'
 import CategorySelector from '../components/inputs/CategorySelector.vue'
+import DescriptionInput from '../components/inputs/DescriptionInput.vue'
 
 const router = useRouter()
 const financeStore = useFinanceStore()
@@ -22,6 +23,7 @@ onMounted(async () => {
   await Promise.all([
     financeStore.fetchWallets(),
     financeStore.fetchCategories()
+    // financeStore.fetchDescriptionSuggestions() - No longer needed globally
   ])
   
   if (financeStore.wallets.length > 0) {
@@ -145,12 +147,11 @@ const handleSubmit = async () => {
         <!-- Description -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-          <textarea
+          <DescriptionInput
             v-model="description"
-            rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Add a note..."
-          ></textarea>
+            :category-id="categoryId"
+            placeholder="Enter description..."
+          />
         </div>
 
         <!-- Actions -->
