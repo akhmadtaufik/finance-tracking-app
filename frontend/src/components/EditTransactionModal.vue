@@ -1,10 +1,12 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import CurrencyInput from './CurrencyInput.vue'
 import WalletSelector from './inputs/WalletSelector.vue'
 import CategorySelector from './inputs/CategorySelector.vue'
+import DescriptionInput from './inputs/DescriptionInput.vue'
 import api from '../api'
 import { useUIStore } from '../stores/ui'
+import { useFinanceStore } from '../stores/finance'
 
 const props = defineProps({
   show: {
@@ -28,6 +30,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'success'])
 
 const uiStore = useUIStore()
+const financeStore = useFinanceStore()
 
 const type = ref('EXPENSE')
 const walletId = ref(null)
@@ -45,6 +48,7 @@ const filteredCategories = computed(() => {
 watch(() => props.show, (newVal) => {
   if (newVal && props.transaction) {
     populateForm()
+    // Autocomplete fetch is handled by DescriptionInput component now
   }
 })
 
@@ -204,12 +208,11 @@ const formatCurrency = (value) => {
         <!-- Description -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-          <textarea
+          <DescriptionInput
             v-model="description"
-            rows="2"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Add a note..."
-          ></textarea>
+            :category-id="categoryId"
+            placeholder="Enter description..."
+          />
         </div>
       </div>
 

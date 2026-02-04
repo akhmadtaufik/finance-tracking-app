@@ -96,6 +96,27 @@ async def get_transactions(
     return transactions
 
 
+@router.get(
+    "/suggestions",
+    response_model=List[str],
+    summary="Get Description Suggestions",
+    description="Retrieve unique descriptions from user's transaction history for autocomplete.",
+    responses={
+        200: {"description": "List of unique descriptions"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def get_description_suggestions(
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+):
+    trans_repo = TransactionRepository(conn)
+    return await trans_repo.get_distinct_descriptions(
+        current_user["id"], category_id=category_id
+    )
+
+
 @router.post(
     "",
     response_model=TransactionResponse,

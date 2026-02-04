@@ -16,7 +16,7 @@ class TransactionRepository:
         amount: Decimal,
         trans_type: str,
         transaction_date: date,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> dict:
         async with self.conn.transaction():
             wallet = await self.conn.fetchrow(
@@ -26,13 +26,14 @@ class TransactionRepository:
                 WHERE id = $1 AND user_id = $2
                 FOR UPDATE
                 """,
-                wallet_id, user_id
+                wallet_id,
+                user_id,
             )
             if not wallet:
                 raise ValueError("Wallet not found")
             if trans_type == "EXPENSE" and wallet["balance"] < amount:
                 raise ValueError("Insufficient balance in wallet")
-            
+
             # Insert transaction
             row = await self.conn.fetchrow(
                 """
@@ -40,21 +41,29 @@ class TransactionRepository:
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id, user_id, wallet_id, category_id, amount, type, transaction_date, description, created_at
                 """,
-                user_id, wallet_id, category_id, amount, trans_type, transaction_date, description
+                user_id,
+                wallet_id,
+                category_id,
+                amount,
+                trans_type,
+                transaction_date,
+                description,
             )
-            
+
             # Update wallet balance
             if trans_type == "INCOME":
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance + $1 WHERE id = $2",
-                    amount, wallet_id
+                    amount,
+                    wallet_id,
                 )
             else:
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance - $1 WHERE id = $2",
-                    amount, wallet_id
+                    amount,
+                    wallet_id,
                 )
-            
+
             return dict(row)
 
     async def get_by_user(
@@ -64,11 +73,11 @@ class TransactionRepository:
         offset: int = 0,
         trans_type: Optional[str] = None,
         start_date: Optional[date] = None,
-        end_date: Optional[date] = None
+        end_date: Optional[date] = None,
     ) -> List[dict]:
         # Check if date filter is active
         has_date_filter = start_date is not None and end_date is not None
-        
+
         base_query = """
             SELECT t.id, t.user_id, t.wallet_id, t.category_id, t.amount, t.type,
                    t.transaction_date, t.description, t.created_at,
@@ -80,12 +89,12 @@ class TransactionRepository:
         """
         params = [user_id]
         param_idx = 2
-        
+
         if trans_type:
             base_query += f" AND t.type = ${param_idx}"
             params.append(trans_type)
             param_idx += 1
-        
+
         if has_date_filter:
             # Scenario A: Date filter active - fetch ALL matching rows (no LIMIT)
             base_query += f" AND t.transaction_date >= ${param_idx} AND t.transaction_date <= ${param_idx + 1}"
@@ -97,7 +106,7 @@ class TransactionRepository:
             base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
             base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
             params.extend([limit, offset])
-        
+
         rows = await self.conn.fetch(base_query, *params)
         return [dict(row) for row in rows]
 
@@ -111,7 +120,7 @@ class TransactionRepository:
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1
             """,
-            user_id
+            user_id,
         )
         return dict(row)
 
@@ -122,7 +131,7 @@ class TransactionRepository:
         dest_wallet_id: int,
         amount: Decimal,
         transaction_date: date,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> dict:
         async with self.conn.transaction():
             source_wallet = await self.conn.fetchrow(
@@ -132,11 +141,12 @@ class TransactionRepository:
                 WHERE id = $1 AND user_id = $2
                 FOR UPDATE
                 """,
-                source_wallet_id, user_id
+                source_wallet_id,
+                user_id,
             )
             if not source_wallet:
                 raise ValueError("Source wallet not found")
-            
+
             dest_wallet = await self.conn.fetchrow(
                 """
                 SELECT id
@@ -144,14 +154,15 @@ class TransactionRepository:
                 WHERE id = $1 AND user_id = $2
                 FOR UPDATE
                 """,
-                dest_wallet_id, user_id
+                dest_wallet_id,
+                user_id,
             )
             if not dest_wallet:
                 raise ValueError("Destination wallet not found")
-            
+
             if source_wallet["balance"] < amount:
                 raise ValueError("Insufficient balance in source wallet")
-            
+
             # Get or create "Transfer" category (global)
             category = await self.conn.fetchrow(
                 """
@@ -160,9 +171,9 @@ class TransactionRepository:
                 ORDER BY user_id NULLS LAST
                 LIMIT 1
                 """,
-                user_id
+                user_id,
             )
-            
+
             if not category:
                 category = await self.conn.fetchrow(
                     """
@@ -172,22 +183,26 @@ class TransactionRepository:
                     RETURNING id
                     """
                 )
-            
-            category_id = category['id']
+
+            category_id = category["id"]
             transfer_desc = description or "Transfer between wallets"
-            
+
             # Deduct from source wallet
             await self.conn.execute(
                 "UPDATE wallets SET balance = balance - $1 WHERE id = $2 AND user_id = $3",
-                amount, source_wallet_id, user_id
+                amount,
+                source_wallet_id,
+                user_id,
             )
-            
+
             # Add to destination wallet
             await self.conn.execute(
                 "UPDATE wallets SET balance = balance + $1 WHERE id = $2 AND user_id = $3",
-                amount, dest_wallet_id, user_id
+                amount,
+                dest_wallet_id,
+                user_id,
             )
-            
+
             # Insert EXPENSE record (from source)
             out_record = await self.conn.fetchrow(
                 """
@@ -195,9 +210,14 @@ class TransactionRepository:
                 VALUES ($1, $2, $3, $4, 'EXPENSE', $5, $6)
                 RETURNING id, user_id, wallet_id, category_id, amount, type, transaction_date, description, created_at
                 """,
-                user_id, source_wallet_id, category_id, amount, transaction_date, f"[OUT] {transfer_desc}"
+                user_id,
+                source_wallet_id,
+                category_id,
+                amount,
+                transaction_date,
+                f"[OUT] {transfer_desc}",
             )
-            
+
             # Insert INCOME record (to destination)
             in_record = await self.conn.fetchrow(
                 """
@@ -205,13 +225,18 @@ class TransactionRepository:
                 VALUES ($1, $2, $3, $4, 'INCOME', $5, $6)
                 RETURNING id, user_id, wallet_id, category_id, amount, type, transaction_date, description, created_at
                 """,
-                user_id, dest_wallet_id, category_id, amount, transaction_date, f"[IN] {transfer_desc}"
+                user_id,
+                dest_wallet_id,
+                category_id,
+                amount,
+                transaction_date,
+                f"[IN] {transfer_desc}",
             )
-            
+
             return {
                 "out_transaction": dict(out_record),
                 "in_transaction": dict(in_record),
-                "amount": float(amount)
+                "amount": float(amount),
             }
 
     async def update(
@@ -223,7 +248,7 @@ class TransactionRepository:
         amount: Optional[Decimal] = None,
         trans_type: Optional[str] = None,
         transaction_date: Optional[date] = None,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> Optional[dict]:
         """
         Update transaction with atomic balance correction using Revert & Apply strategy.
@@ -238,70 +263,84 @@ class TransactionRepository:
                 WHERE t.id = $1 AND t.user_id = $2
                 FOR UPDATE
                 """,
-                transaction_id, user_id
+                transaction_id,
+                user_id,
             )
-            
+
             if not old_trans:
                 return None
-            
-            old_wallet_id = old_trans['wallet_id']
-            old_amount = old_trans['amount']
-            old_type = old_trans['type']
-            
+
+            old_wallet_id = old_trans["wallet_id"]
+            old_amount = old_trans["amount"]
+            old_type = old_trans["type"]
+
             # Determine new values (use old if not provided)
             new_wallet_id = wallet_id if wallet_id is not None else old_wallet_id
             new_amount = amount if amount is not None else old_amount
             new_type = trans_type if trans_type is not None else old_type
-            new_category_id = category_id if category_id is not None else old_trans['category_id']
-            new_date = transaction_date if transaction_date is not None else old_trans['transaction_date']
-            new_desc = description if description is not None else old_trans['description']
-            
+            new_category_id = (
+                category_id if category_id is not None else old_trans["category_id"]
+            )
+            new_date = (
+                transaction_date
+                if transaction_date is not None
+                else old_trans["transaction_date"]
+            )
+            new_desc = (
+                description if description is not None else old_trans["description"]
+            )
+
             # Step 2A: Revert old impact on old wallet
             await self.conn.fetchrow(
                 "SELECT id FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE",
-                old_wallet_id, user_id
+                old_wallet_id,
+                user_id,
             )
-            
-            if old_type == 'EXPENSE':
+
+            if old_type == "EXPENSE":
                 # Was expense, add back to wallet
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance + $1 WHERE id = $2",
-                    old_amount, old_wallet_id
+                    old_amount,
+                    old_wallet_id,
                 )
             else:
                 # Was income, subtract from wallet
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance - $1 WHERE id = $2",
-                    old_amount, old_wallet_id
+                    old_amount,
+                    old_wallet_id,
                 )
-            
+
             # Step 2B: Apply new impact on new wallet
             if new_wallet_id != old_wallet_id:
                 new_wallet = await self.conn.fetchrow(
                     "SELECT id, balance FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE",
-                    new_wallet_id, user_id
+                    new_wallet_id,
+                    user_id,
                 )
                 if not new_wallet:
                     raise ValueError("New wallet not found")
             else:
                 new_wallet = await self.conn.fetchrow(
-                    "SELECT id, balance FROM wallets WHERE id = $1",
-                    new_wallet_id
+                    "SELECT id, balance FROM wallets WHERE id = $1", new_wallet_id
                 )
-            
-            if new_type == 'EXPENSE':
-                if new_wallet['balance'] < new_amount:
+
+            if new_type == "EXPENSE":
+                if new_wallet["balance"] < new_amount:
                     raise ValueError("Insufficient balance in wallet")
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance - $1 WHERE id = $2",
-                    new_amount, new_wallet_id
+                    new_amount,
+                    new_wallet_id,
                 )
             else:
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance + $1 WHERE id = $2",
-                    new_amount, new_wallet_id
+                    new_amount,
+                    new_wallet_id,
                 )
-            
+
             # Step 3: Update transaction record
             row = await self.conn.fetchrow(
                 """
@@ -312,44 +351,81 @@ class TransactionRepository:
                 RETURNING id, user_id, wallet_id, category_id, amount, type, 
                           transaction_date, description, created_at
                 """,
-                new_wallet_id, new_category_id, new_amount, new_type,
-                new_date, new_desc, transaction_id, user_id
+                new_wallet_id,
+                new_category_id,
+                new_amount,
+                new_type,
+                new_date,
+                new_desc,
+                transaction_id,
+                user_id,
             )
-            
+
             return dict(row) if row else None
+
+    async def get_distinct_descriptions(
+        self, user_id: int, category_id: Optional[int] = None, limit: int = 50
+    ) -> list[str]:
+        """
+        Fetch unique descriptions for a user for autocomplete suggestions.
+        Optionally filter by category_id for context-aware suggestions.
+        """
+        query = """
+            SELECT DISTINCT description 
+            FROM transactions 
+            WHERE user_id = $1 
+              AND description IS NOT NULL 
+              AND description != ''
+        """
+        params = [user_id]
+
+        if category_id is not None:
+            query += " AND category_id = $2"
+            params.append(category_id)
+
+        query += " ORDER BY description ASC LIMIT $" + str(len(params) + 1)
+        params.append(limit)
+
+        rows = await self.conn.fetch(query, *params)
+        return [row["description"] for row in rows]
 
     async def delete(self, transaction_id: int, user_id: int) -> bool:
         async with self.conn.transaction():
             # Get transaction details first
             trans = await self.conn.fetchrow(
                 "SELECT wallet_id, amount, type FROM transactions WHERE id = $1 AND user_id = $2",
-                transaction_id, user_id
+                transaction_id,
+                user_id,
             )
-            
+
             if not trans:
                 return False
-            
+
             await self.conn.fetchrow(
                 "SELECT id FROM wallets WHERE id = $1 AND user_id = $2 FOR UPDATE",
-                trans['wallet_id'], user_id
+                trans["wallet_id"],
+                user_id,
             )
-            
+
             # Reverse the balance change
-            if trans['type'] == "INCOME":
+            if trans["type"] == "INCOME":
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance - $1 WHERE id = $2",
-                    trans['amount'], trans['wallet_id']
+                    trans["amount"],
+                    trans["wallet_id"],
                 )
             else:
                 await self.conn.execute(
                     "UPDATE wallets SET balance = balance + $1 WHERE id = $2",
-                    trans['amount'], trans['wallet_id']
+                    trans["amount"],
+                    trans["wallet_id"],
                 )
-            
+
             # Delete the transaction
             result = await self.conn.execute(
                 "DELETE FROM transactions WHERE id = $1 AND user_id = $2",
-                transaction_id, user_id
+                transaction_id,
+                user_id,
             )
-            
+
             return result == "DELETE 1"
