@@ -41,6 +41,7 @@ services:
       - "8000:8000"
     volumes:
       - ./certs:/app/certs:ro
+      - ./backend/logs:/app/backend/logs
     networks:
       - app-network
 
