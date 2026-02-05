@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { pinia } from '../stores'
 import { useUIStore } from '../stores/ui'
+import logger, { setRequestId } from '../services/logger'
 
 axios.defaults.withCredentials = true
 const existingToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
@@ -61,6 +62,7 @@ const showErrorToast = (error) => {
 api.interceptors.request.use(
   (config) => {
     uiStore.startLoading()
+    config._startTime = Date.now()
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -69,6 +71,7 @@ api.interceptors.request.use(
   },
   (error) => {
     uiStore.stopLoading()
+    logger.captureError(error, { context: 'request_interceptor' })
     return Promise.reject(error)
   }
 )
@@ -77,6 +80,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     uiStore.stopLoading()
+    
+    // Capture request ID from response headers
+    const requestId = response.headers?.['x-request-id']
+    if (requestId) {
+      setRequestId(requestId)
+    }
+    
+    // Log successful API calls
+    const duration = Date.now() - (response.config._startTime || Date.now())
+    logger.api(response.config.method?.toUpperCase(), response.config.url, response.status, duration)
+    
     return response
   },
   async (error) => {
