@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
 # Copy application code into backend folder structure
 COPY . ./backend/
 

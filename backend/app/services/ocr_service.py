@@ -51,7 +51,7 @@ Rules:
     def __init__(self):
         """Initialize the Gemini model with API key configuration."""
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.0-flash")
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
 
     def _parse_json_response(self, response_text: str) -> dict:
         """
