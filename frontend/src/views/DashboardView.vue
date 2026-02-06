@@ -56,6 +56,19 @@ const handleEdit = (trans) => {
 const handleEditSuccess = async () => {
   showEditModal.value = false
   editingTransaction.value = null
+  
+  // Refresh transactions based on current view
+  if (isDefaultView.value) {
+    await resetView()
+  } else {
+    await handleDateFilter()
+  }
+  
+  // Refresh summary and wallets as they might have changed
+  await Promise.all([
+    financeStore.fetchSummary(),
+    financeStore.fetchWallets()
+  ])
 }
 
 const formatCurrency = (value) => {
