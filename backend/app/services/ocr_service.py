@@ -118,7 +118,15 @@ Rules:
                 )
 
             # Parse the JSON response
-            return self._parse_json_response(response.text)
+            extracted_data = self._parse_json_response(response.text)
+
+            # Post-process items to Title Case
+            if "items" in extracted_data:
+                for item in extracted_data["items"]:
+                    if "name" in item and isinstance(item["name"], str):
+                        item["name"] = item["name"].title()
+
+            return extracted_data
 
         except google_exceptions.ResourceExhausted:
             # Free tier quota exceeded
