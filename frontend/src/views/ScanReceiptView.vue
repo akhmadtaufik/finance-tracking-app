@@ -216,7 +216,7 @@ const saveTransactions = async () => {
       type: 'success'
     })
 
-    router.push('/dashboard') // Redirect locally to dashboard
+    router.push('/')
   } catch (error) {
     console.error('Save failed', error)
     uiStore.showToast({
