@@ -96,6 +96,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateProfile(username) {
+    const response = await api.put('/users/profile', { username })
+    user.value = response.data
+    return response.data
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    const response = await api.put('/users/password', {
+      current_password: currentPassword,
+      new_password: newPassword
+    })
+    return response.data
+  }
+
   // Auto fetch user jika ada token tersimpan
   if (token.value) {
     fetchUser()
@@ -112,6 +126,8 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUser,
     logout,
     logoutAllDevices,
-    fetchSessions
+    fetchSessions,
+    updateProfile,
+    changePassword
   }
 })
