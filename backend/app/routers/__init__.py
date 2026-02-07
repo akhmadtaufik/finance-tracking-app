@@ -7,3 +7,4 @@ from .reports import router as reports_router
 from .admin import router as admin_router
 from .receipts import router as receipts_router
 from .logs import router as logs_router
+from .users import router as users_router

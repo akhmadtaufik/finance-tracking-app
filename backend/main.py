@@ -29,6 +29,7 @@ from backend.app.routers import (
     admin_router,
     receipts_router,
     logs_router,
+    users_router,
 )
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -112,6 +113,7 @@ app.include_router(reports_router)
 app.include_router(admin_router)
 app.include_router(receipts_router)
 app.include_router(logs_router)
+app.include_router(users_router)
 
 
 @app.get("/")

@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     GOOGLE_API_KEY: str
 
+    # Mail settings
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_PORT: int
+    MAIL_SERVER: str
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+    USE_CREDENTIALS: bool = True
+    VALIDATE_CERTS: bool = True
+    FRONTEND_URL: str = "http://localhost"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator("SECRET_KEY")

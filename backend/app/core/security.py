@@ -20,6 +20,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
 # --- Password Functions ---
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -29,6 +30,7 @@ def hash_password(password: str) -> str:
 
 
 # --- Access Token Functions ---
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a short-lived JWT access token."""
@@ -43,13 +45,39 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def decode_token(token: str) -> Optional[dict]:
     """Decode and validate a JWT token."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         return payload
     except JWTError:
         return None
 
 
+# --- Password Reset Token Functions ---
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create a JWT token for password reset with 15 minute expiry."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {"sub": email, "exp": expire, "type": "password-reset"}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verify password reset token and return email if valid."""
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("type") != "password-reset":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
 # --- Refresh Token Functions ---
+
 
 def create_refresh_token() -> str:
     """Generate a cryptographically secure refresh token."""
@@ -62,29 +90,28 @@ def hash_token(token: str) -> str:
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+    token: str = Depends(oauth2_scheme), conn: asyncpg.Connection = Depends(get_db_conn)
 ) -> dict:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception
-    
+
     user_id: int = payload.get("sub")
     if user_id is None:
         raise credentials_exception
-    
+
     user = await conn.fetchrow(
         "SELECT id, email, username, is_superuser, is_active, created_at FROM users WHERE id = $1",
-        int(user_id)
+        int(user_id),
     )
-    
+
     if user is None:
         raise credentials_exception
-    
+
     return dict(user)

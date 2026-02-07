@@ -30,3 +30,27 @@ class UserRepository:
             user_id
         )
         return dict(row) if row else None
+
+    async def get_by_id_with_password(self, user_id: int) -> Optional[dict]:
+        row = await self.conn.fetchrow(
+            "SELECT id, email, username, password_hash, created_at FROM users WHERE id = $1",
+            user_id
+        )
+        return dict(row) if row else None
+
+    async def update_username(self, user_id: int, new_username: str) -> Optional[dict]:
+        row = await self.conn.fetchrow(
+            """
+            UPDATE users SET username = $1 WHERE id = $2
+            RETURNING id, username, email, is_superuser, is_active, created_at
+            """,
+            new_username, user_id
+        )
+        return dict(row) if row else None
+
+    async def update_password(self, user_id: int, hashed_password: str) -> bool:
+        result = await self.conn.execute(
+            "UPDATE users SET password_hash = $1 WHERE id = $2",
+            hashed_password, user_id
+        )
+        return result == "UPDATE 1"
