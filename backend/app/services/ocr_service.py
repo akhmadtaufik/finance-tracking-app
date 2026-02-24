@@ -3,17 +3,42 @@ Receipt Scanner Service using Google Gemini Flash Vision.
 
 This service handles receipt image processing and extraction of
 structured data (items, prices, dates) using AI vision capabilities.
+
+Uses Gemini's native Structured Outputs (response_schema) to guarantee
+100% valid JSON and lock the response keys, eliminating JSONDecodeError
+and schema hallucination issues.
 """
 
 import json
-import re
-from typing import Optional
+
+import typing_extensions as typing
 
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from fastapi import HTTPException, status
 
 from ..core.config import settings
+
+
+# ──────────────────────────────────────────────
+#  Structured Output Schemas (TypedDict)
+# ──────────────────────────────────────────────
+
+
+class ReceiptItem(typing.TypedDict):
+    """Schema for a single receipt line-item."""
+
+    name: str
+    price: int
+    category_guess: str
+
+
+class ExpectedReceipt(typing.TypedDict):
+    """Top-level schema enforced on every Gemini response."""
+
+    date: str
+    total_amount: int
+    items: list[ReceiptItem]
 
 
 class ReceiptScanner:
@@ -25,28 +50,18 @@ class ReceiptScanner:
     - Transaction date
     - Total amount
     - Category guesses for each item
+
+    Uses `response_schema` to enforce output shape at the API level,
+    preventing prompt drift and JSON formatting errors.
     """
 
-    SYSTEM_PROMPT = """Analyze this shopping receipt image. Extract every purchased item, its price, and the date.
-Return strictly a JSON object with no additional text. Attempt to guess the category based on the item name.
-
-Expected format:
-{
-  "date": "YYYY-MM-DD",
-  "total_amount": 100000,
-  "items": [
-    {"name": "Item Name", "price": 3500, "category_guess": "Food"},
-    {"name": "Another Item", "price": 5000, "category_guess": "Hygiene"}
-  ]
-}
-
+    SYSTEM_PROMPT = """Analyze this shopping receipt image. Extract every purchased item, its final price, and the transaction date.
+    Attempt to guess the category based on the item name.
 Rules:
-- Date should be in YYYY-MM-DD format. If unclear, use null.
-- Prices should be numeric (no currency symbols).
-- total_amount is the final total on the receipt.
-- category_guess should be one of: Food, Transport, Shopping, Entertainment, Bills, Health, Hygiene, Education, Other.
-- If an item cannot be read clearly, make a best guess or skip it.
-- Return ONLY valid JSON, no markdown formatting."""
+- Date should be in YYYY-MM-DD format.
+- Indonesian receipts commonly print dates as DD-MM-YY (e.g. 23-02-26 means 23 Feb 2026, NOT 2023-02-26). Always interpret two-digit years as 20XX. When ambiguous, prefer DD-MM-YY over YY-MM-DD.
+- Prices should be strictly numeric.
+- Category must be one of: Food, Transport, Shopping, Entertainment, Bills, Health, Hygiene, Education, Other."""
 
     def __init__(self):
         """Initialize the Gemini model with API key configuration."""
@@ -55,30 +70,18 @@ Rules:
 
     def _parse_json_response(self, response_text: str) -> dict:
         """
-        Parse JSON from AI response, handling markdown code blocks.
+        Parse JSON from AI response.
 
-        The AI sometimes wraps JSON in ```json ... ``` blocks.
-        This method strips those before parsing.
+        With response_mime_type="application/json" the model is guaranteed
+        to return a valid JSON string (no markdown fences), so this parser
+        is intentionally minimal.
         """
-        # Remove markdown code blocks if present
-        cleaned = response_text.strip()
-
-        # Handle ```json ... ``` format
-        if cleaned.startswith("```"):
-            # Remove opening ``` with optional language specifier
-            cleaned = re.sub(r"^```(?:json)?\s*\n?", "", cleaned)
-            # Remove closing ```
-            cleaned = re.sub(r"\n?```$", "", cleaned)
-
-        # Handle ``` without json specifier
-        cleaned = cleaned.strip()
-
         try:
-            return json.loads(cleaned)
+            return json.loads(response_text)
         except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to parse AI response as JSON: {str(e)}",
+                detail=f"Failed to parse AI response as JSON: {str(e)}\nRaw: {response_text}",
             )
 
     async def scan_image(
@@ -101,12 +104,13 @@ Rules:
             # Create image part for the model
             image_part = {"mime_type": mime_type, "data": image_bytes}
 
-            # Generate content with the image
+            # Generate content with structured output enforcement
             response = self.model.generate_content(
                 [self.SYSTEM_PROMPT, image_part],
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.1,  # Low temperature for consistent output
-                    max_output_tokens=2048,
+                    response_mime_type="application/json",
+                    response_schema=ExpectedReceipt,
                 ),
             )
 
