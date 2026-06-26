@@ -8,6 +8,28 @@ from typing import Optional, Literal
 XSS_PATTERN = re.compile(r'<script|javascript:|on\w+\s*=', re.IGNORECASE)
 
 
+class TransferRequest(BaseModel):
+    """Schema for wallet-to-wallet transfer request."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source_wallet_id": 1,
+                "dest_wallet_id": 2,
+                "amount": 500000.00,
+                "transaction_date": "2024-12-01",
+                "description": "Transfer ke dompet darurat",
+            }
+        }
+    )
+
+    source_wallet_id: int
+    dest_wallet_id: int
+    amount: Decimal
+    transaction_date: Optional[date] = None
+    description: Optional[str] = None
+
+
 class TransactionCreate(BaseModel):
     """Schema for creating a new transaction with strict validation."""
     model_config = ConfigDict(
