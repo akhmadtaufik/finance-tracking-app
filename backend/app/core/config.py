@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def override_db_url_in_docker(cls, value: str) -> str:
+        import os
+        if value and os.path.exists("/.dockerenv") and "localhost" in value:
+            return value.replace("localhost", "db")
+        return value
 
     @field_validator("SECRET_KEY")
     @classmethod
