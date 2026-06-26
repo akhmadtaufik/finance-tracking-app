@@ -12,9 +12,18 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# Set test database URL
-TEST_DATABASE_URL = "postgresql://postgres:Rnpl1105@localhost:5432/finance_test_db"
+# Set test database URL dynamically based on environment
+import os
+DB_HOST = "db" if os.path.exists("/.dockerenv") else "localhost"
+TEST_DATABASE_URL = f"postgresql://postgres:Rnpl1105@{DB_HOST}:5432/finance_test_db"
+SYS_DATABASE_URL = f"postgresql://postgres:Rnpl1105@{DB_HOST}:5432/postgres"
+
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+# Force settings update if config was already imported by pytest discovery
+import sys
+if "backend.app.core.config" in sys.modules:
+    sys.modules["backend.app.core.config"].settings.DATABASE_URL = TEST_DATABASE_URL
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 TEST_USER_PASSWORD = os.getenv("TEST_PASSWORD")
 
@@ -32,9 +41,7 @@ def event_loop():
 async def test_db():
     """Create and setup test database, teardown after all tests."""
     # Connect to default postgres to create test db
-    sys_conn = await asyncpg.connect(
-        "postgresql://postgres:Rnpl1105@localhost:5432/postgres"
-    )
+    sys_conn = await asyncpg.connect(SYS_DATABASE_URL)
     
     # Drop if exists and create fresh test database
     await sys_conn.execute("DROP DATABASE IF EXISTS finance_test_db")
@@ -77,9 +84,7 @@ async def test_db():
     # Teardown: close pool and drop database
     await pool.close()
     
-    sys_conn = await asyncpg.connect(
-        "postgresql://postgres:Rnpl1105@localhost:5432/postgres"
-    )
+    sys_conn = await asyncpg.connect(SYS_DATABASE_URL)
     await sys_conn.execute("DROP DATABASE IF EXISTS finance_test_db")
     await sys_conn.close()
 
@@ -115,7 +120,7 @@ async def client(test_db):
 @pytest_asyncio.fixture
 async def test_user(client):
     """Create a test user via API and return user data with password."""
-    password = TEST_USER_PASSWORD
+    password = os.getenv("TEST_PASSWORD", "TestPass123!")
     
     # Register user via API
     response = await client.post("/auth/register", json={
