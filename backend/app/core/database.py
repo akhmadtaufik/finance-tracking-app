@@ -7,6 +7,7 @@ pool: asyncpg.Pool = None
 
 async def create_pool():
     global pool
+    print(f"DEBUG: create_pool connecting to {settings.DATABASE_URL}")
     pool = await asyncpg.create_pool(settings.DATABASE_URL, min_size=5, max_size=20)
     print("Database pool created")
 
