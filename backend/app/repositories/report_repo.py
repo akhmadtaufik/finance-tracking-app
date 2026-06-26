@@ -37,8 +37,8 @@ class ReportRepository:
             """
             SELECT 
                 COUNT(*) as total_transactions,
-                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_expense
+                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_expense
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1 
