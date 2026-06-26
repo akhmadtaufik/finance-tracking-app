@@ -13,6 +13,10 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'default'
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -39,8 +43,10 @@ const variantClasses = computed(() => {
 <template>
   <div class="bg-white rounded-lg shadow p-6" data-testid="summary-card">
     <p class="text-sm font-medium text-gray-500">{{ title }}</p>
-    <p class="text-2xl font-bold" :class="variantClasses">
-      {{ formattedAmount }}
-    </p>
+    <phantom-ui :loading="isLoading" animation="shimmer">
+      <p class="text-2xl font-bold" :class="variantClasses">
+        {{ formattedAmount }}
+      </p>
+    </phantom-ui>
   </div>
 </template>

@@ -1,7 +1,8 @@
 <script setup>
 defineProps({
   wallet: { type: Object, required: true },
-  showDelete: { type: Boolean, default: false }
+  showDelete: { type: Boolean, default: false },
+  isLoading: { type: Boolean, default: false }
 })
 
 defineEmits(['delete'])
@@ -47,9 +48,11 @@ const formatCurrency = (value) => {
         </svg>
       </button>
     </div>
-    <h3 class="text-sm font-semibold text-gray-800 truncate">{{ wallet.name }}</h3>
-    <p class="text-lg font-bold text-indigo-600 mt-1">
-      {{ formatCurrency(wallet.balance) }}
-    </p>
+    <phantom-ui :loading="isLoading" animation="shimmer">
+      <h3 class="text-sm font-semibold text-gray-800 truncate">{{ wallet.name }}</h3>
+      <p class="text-lg font-bold text-indigo-600 mt-1">
+        {{ formatCurrency(wallet.balance) }}
+      </p>
+    </phantom-ui>
   </div>
 </template>

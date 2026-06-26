@@ -24,21 +24,22 @@ const suggestions = ref([])
 const inputRef = ref(null)
 const containerRef = ref(null)
 const loading = ref(false)
+let debounceTimer = null
 
 // Fetch suggestions when category changes
 watch(() => props.categoryId, async (newVal) => {
   if (newVal) {
-    await fetchSuggestions(newVal)
+    await fetchSuggestions(newVal, props.modelValue || '')
   } else {
     suggestions.value = []
   }
 }, { immediate: true })
 
-async function fetchSuggestions(categoryId) {
+async function fetchSuggestions(categoryId, query = '') {
   loading.value = true
   try {
     const response = await api.get('/transactions/suggestions', {
-      params: { category_id: categoryId }
+      params: { category_id: categoryId, q: query }
     })
     suggestions.value = response.data
   } catch (error) {
@@ -49,23 +50,29 @@ async function fetchSuggestions(categoryId) {
   }
 }
 
+function debouncedFetchSuggestions() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    if (props.categoryId) {
+      fetchSuggestions(props.categoryId, props.modelValue || '')
+    }
+  }, 300)
+}
+
 const filteredSuggestions = computed(() => {
-  if (!props.modelValue && props.modelValue !== '') return []
-  
-  const query = props.modelValue.toLowerCase()
-  return suggestions.value.filter(item => 
-    item.toLowerCase().includes(query) && 
-    item.toLowerCase() !== query // Don't show if exactly matches
-  ).slice(0, 10) // Limit to 10 items
+  const query = (props.modelValue || '').toLowerCase()
+  // The backend handles filtering and ordering, we just hide exact matches
+  return suggestions.value.filter(item => item.toLowerCase() !== query)
 })
 
 const showDropdown = computed(() => {
-  return isOpen.value && filteredSuggestions.value.length > 0 && props.modelValue.length > 0
+  return isOpen.value && filteredSuggestions.value.length > 0
 })
 
 function handleInput(event) {
   emit('update:modelValue', event.target.value)
   isOpen.value = true
+  debouncedFetchSuggestions()
 }
 
 function handleFocus() {
