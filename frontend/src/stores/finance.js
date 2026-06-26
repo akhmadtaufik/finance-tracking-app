@@ -13,35 +13,56 @@ export const useFinanceStore = defineStore('finance', () => {
     net: 0
   })
   const loading = ref(false)
+  const isLoadingWallets = ref(false)
+  const isLoadingCategories = ref(false)
+  const isLoadingTransactions = ref(false)
+  const isLoadingSummary = ref(false)
 
   async function fetchWallets() {
-    const response = await api.get('/wallets')
-    wallets.value = response.data
-    return response.data
+    isLoadingWallets.value = true
+    try {
+      const response = await api.get('/wallets')
+      wallets.value = response.data
+      return response.data
+    } finally {
+      isLoadingWallets.value = false
+    }
   }
 
   async function fetchCategories(type = null) {
-    const params = type ? { type } : {}
-    const response = await api.get('/categories', { params })
-    categories.value = response.data
-    return response.data
+    isLoadingCategories.value = true
+    try {
+      const params = type ? { type } : {}
+      const response = await api.get('/categories', { params })
+      categories.value = response.data
+      return response.data
+    } finally {
+      isLoadingCategories.value = false
+    }
   }
 
   async function fetchTransactions(params = {}) {
     loading.value = true
+    isLoadingTransactions.value = true
     try {
       const response = await api.get('/transactions', { params })
       transactions.value = response.data
       return response.data
     } finally {
       loading.value = false
+      isLoadingTransactions.value = false
     }
   }
 
   async function fetchSummary() {
-    const response = await api.get('/transactions/summary')
-    summary.value = response.data
-    return response.data
+    isLoadingSummary.value = true
+    try {
+      const response = await api.get('/transactions/summary')
+      summary.value = response.data
+      return response.data
+    } finally {
+      isLoadingSummary.value = false
+    }
   }
 
   async function createTransaction(data) {
@@ -79,6 +100,10 @@ export const useFinanceStore = defineStore('finance', () => {
     transactions,
     summary,
     loading,
+    isLoadingWallets,
+    isLoadingCategories,
+    isLoadingTransactions,
+    isLoadingSummary,
     fetchWallets,
     fetchCategories,
     fetchTransactions,
