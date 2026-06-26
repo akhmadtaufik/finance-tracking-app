@@ -171,19 +171,22 @@ const onTransferSuccess = async () => {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <WalletCard
-        v-for="wallet in financeStore.wallets"
-        :key="wallet.id"
-        :wallet="wallet"
-        :show-delete="true"
-        @delete="openDeleteModal"
-      />
-    </div>
+    <phantom-ui :loading="financeStore.isLoadingWallets" animation="shimmer">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <WalletCard
+          v-for="wallet in financeStore.wallets"
+          :key="wallet.id"
+          :wallet="wallet"
+          :show-delete="true"
+          :isLoading="financeStore.isLoadingWallets"
+          @delete="openDeleteModal"
+        />
+      </div>
 
-    <p v-if="financeStore.wallets.length === 0" class="text-center text-gray-500 py-12">
-      No wallets yet. Create your first wallet!
-    </p>
+      <p v-if="financeStore.wallets.length === 0" class="text-center text-gray-500 py-12">
+        No wallets yet. Create your first wallet!
+      </p>
+    </phantom-ui>
 
     <!-- Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

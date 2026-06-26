@@ -41,7 +41,8 @@ onMounted(async () => {
     financeStore.fetchWallets(),
     financeStore.fetchTransactions({
       start_date: fiveDaysAgo,
-      end_date: today
+      end_date: today,
+      limit: 100
     }),
     financeStore.fetchSummary(),
     financeStore.fetchCategories()
@@ -99,7 +100,8 @@ const handleDateFilter = async () => {
     isDefaultView.value = false
     await financeStore.fetchTransactions({
       start_date: filterDate.value,
-      end_date: filterDate.value
+      end_date: filterDate.value,
+      limit: 100
     })
   } else {
     await resetView()
@@ -113,7 +115,8 @@ const resetView = async () => {
   isDefaultView.value = true
   await financeStore.fetchTransactions({
     start_date: fiveDaysAgo,
-    end_date: today
+    end_date: today,
+    limit: 100
   })
 }
 
@@ -155,21 +158,25 @@ const groupedTransactions = computed(() => {
       <SummaryCard
         title="Total Balance"
         :amount="financeStore.summary.total_balance || 0"
+        :isLoading="financeStore.isLoadingSummary"
       />
       <SummaryCard
         title="Total Income"
         :amount="financeStore.summary.total_income || 0"
         variant="income"
+        :isLoading="financeStore.isLoadingSummary"
       />
       <SummaryCard
         title="Total Expense"
         :amount="financeStore.summary.total_expense || 0"
         variant="expense"
+        :isLoading="financeStore.isLoadingSummary"
       />
       <SummaryCard
         title="Net"
         :amount="financeStore.summary.net || 0"
         :variant="financeStore.summary.net >= 0 ? 'income' : 'expense'"
+        :isLoading="financeStore.isLoadingSummary"
       />
     </div>
 
@@ -184,6 +191,7 @@ const groupedTransactions = computed(() => {
             v-for="wallet in financeStore.wallets"
             :key="wallet.id"
             :wallet="wallet"
+            :isLoading="financeStore.isLoadingWallets"
           />
         </div>
         <p v-if="financeStore.wallets.length === 0" class="text-gray-500 text-center py-4">
@@ -222,103 +230,105 @@ const groupedTransactions = computed(() => {
       </div>
 
       <div class="p-4">
-        <!-- Grouped Transactions -->
-        <div v-if="groupedTransactions.length > 0" class="space-y-4">
-          <div v-for="group in groupedTransactions" :key="group.date">
-            <!-- Date Header -->
-            <div class="bg-gray-100 px-4 py-3 rounded-t-lg flex justify-between items-center">
-              <span class="font-semibold text-gray-800">{{ formatDateHeader(group.date) }}</span>
-              <span 
-                class="font-semibold"
-                :class="group.dailyTotal >= 0 ? 'text-green-600' : 'text-red-600'"
-              >
-                {{ group.dailyTotal >= 0 ? '+' : '' }}{{ formatCurrency(group.dailyTotal) }}
-              </span>
-            </div>
+        <phantom-ui :loading="financeStore.isLoadingTransactions" animation="shimmer">
+          <!-- Grouped Transactions -->
+          <div v-if="groupedTransactions.length > 0" class="space-y-4">
+            <div v-for="group in groupedTransactions" :key="group.date">
+              <!-- Date Header -->
+              <div class="bg-gray-100 px-4 py-3 rounded-t-lg flex justify-between items-center">
+                <span class="font-semibold text-gray-800">{{ formatDateHeader(group.date) }}</span>
+                <span 
+                  class="font-semibold"
+                  :class="group.dailyTotal >= 0 ? 'text-green-600' : 'text-red-600'"
+                >
+                  {{ group.dailyTotal >= 0 ? '+' : '' }}{{ formatCurrency(group.dailyTotal) }}
+                </span>
+              </div>
 
-            <!-- Transaction Items -->
-            <div class="border border-t-0 border-gray-200 rounded-b-lg">
-              <div 
-                v-for="trans in group.transactions" 
-                :key="trans.id"
-                class="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-              >
-                <!-- Top Row (Mobile) / Left Side (Desktop): Category & Description -->
-                <div class="flex items-center gap-3 w-full sm:col-span-7">
-                  <!-- Category Badge -->
-                  <div class="flex-shrink-0">
-                    <span 
-                      class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
-                      :class="getCategoryBadgeClass(trans)"
-                    >
-                      <template v-if="isTransferCategory(trans.category_name)">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
-                        </svg>
-                        Transfer
-                      </template>
-                      <template v-else>
-                        {{ trans.category_name }}
-                      </template>
-                    </span>
-                  </div>
-
-                  <!-- Description -->
-                  <div class="min-w-0 flex-1">
-                    <span class="text-sm text-gray-800 font-medium truncate block" :title="trans.description">
-                      {{ trans.description || '-' }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Bottom Row (Mobile) / Right Side (Desktop): Wallet, Amount, Actions -->
-                <div class="flex items-center justify-between w-full sm:col-span-5 sm:justify-end sm:gap-4 mt-1 sm:mt-0">
-                  <!-- Wallet Name -->
-                  <div class="text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">
-                    {{ trans.wallet_name }}
-                  </div>
-
-                  <div class="flex items-center gap-3">
-                    <!-- Amount -->
-                    <span 
-                      class="font-bold text-sm whitespace-nowrap"
-                      :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
-                    >
-                      {{ trans.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(trans.amount) }}
-                    </span>
-
-                    <!-- Actions -->
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                      <button 
-                        @click="handleEdit(trans)"
-                        class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
-                        title="Edit"
+              <!-- Transaction Items -->
+              <div class="border border-t-0 border-gray-200 rounded-b-lg">
+                <div 
+                  v-for="trans in group.transactions" 
+                  :key="trans.id"
+                  class="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                >
+                  <!-- Top Row (Mobile) / Left Side (Desktop): Category & Description -->
+                  <div class="flex items-center gap-3 w-full sm:col-span-7">
+                    <!-- Category Badge -->
+                    <div class="flex-shrink-0">
+                      <span 
+                        class="px-2 py-1 text-xs font-medium rounded-full inline-flex items-center gap-1"
+                        :class="getCategoryBadgeClass(trans)"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button 
-                        @click="handleDelete(trans.id)"
-                        class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                        title="Delete"
+                        <template v-if="isTransferCategory(trans.category_name)">
+                          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 7h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 9H3a1 1 0 1 1 0-2zm14 6h-9.586l2.293 2.293a1 1 0 1 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4a1 1 0 0 1 1.414 1.414L5.414 11H17a1 1 0 1 1 0 2z" />
+                          </svg>
+                          Transfer
+                        </template>
+                        <template v-else>
+                          {{ trans.category_name }}
+                        </template>
+                      </span>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="min-w-0 flex-1">
+                      <span class="text-sm text-gray-800 font-medium truncate block" :title="trans.description">
+                        {{ trans.description || '-' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Bottom Row (Mobile) / Right Side (Desktop): Wallet, Amount, Actions -->
+                  <div class="flex items-center justify-between w-full sm:col-span-5 sm:justify-end sm:gap-4 mt-1 sm:mt-0">
+                    <!-- Wallet Name -->
+                    <div class="text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">
+                      {{ trans.wallet_name }}
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                      <!-- Amount -->
+                      <span 
+                        class="font-bold text-sm whitespace-nowrap"
+                        :class="trans.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                        {{ trans.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(trans.amount) }}
+                      </span>
+
+                      <!-- Actions -->
+                      <div class="flex items-center gap-1 flex-shrink-0">
+                        <button 
+                          @click="handleEdit(trans)"
+                          class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded"
+                          title="Edit"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button 
+                          @click="handleDelete(trans.id)"
+                          class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                          title="Delete"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Empty State -->
-        <p v-else class="text-gray-500 text-center py-8">
-          {{ isDefaultView ? 'No recent transactions. Start by adding one!' : 'No transactions for this date.' }}
-        </p>
+          <!-- Empty State -->
+          <p v-else class="text-gray-500 text-center py-8">
+            {{ isDefaultView ? 'No recent transactions. Start by adding one!' : 'No transactions for this date.' }}
+          </p>
+        </phantom-ui>
       </div>
     </div>
 

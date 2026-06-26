@@ -139,63 +139,65 @@ const confirmDelete = async () => {
     </div>
 
     <!-- Categories Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div
-        v-for="category in filteredCategories"
-        :key="category.id"
-        class="bg-white rounded-lg shadow p-4 flex items-center justify-between"
-      >
-        <div class="flex items-center space-x-3">
-          <div
-            :class="[
-              'w-10 h-10 rounded-full flex items-center justify-center',
-              category.type === 'INCOME' ? 'bg-green-100' : 'bg-red-100'
-            ]"
-          >
-            <svg 
-              :class="category.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
-              class="w-5 h-5" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-              v-html="getIconSvg(category.icon)"
-            ></svg>
-          </div>
-          <div>
-            <p class="font-medium text-gray-800">{{ category.name }}</p>
-            <div class="flex items-center space-x-2">
-              <span
-                :class="[
-                  'text-xs px-2 py-0.5 rounded-full',
-                  category.type === 'INCOME' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                ]"
-              >
-                {{ category.type }}
-              </span>
-              <span v-if="category.is_global" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                Global
-              </span>
-              <span v-else class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                Custom
-              </span>
+    <phantom-ui :loading="financeStore.isLoadingCategories" animation="shimmer">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          v-for="category in filteredCategories"
+          :key="category.id"
+          class="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+        >
+          <div class="flex items-center space-x-3">
+            <div
+              :class="[
+                'w-10 h-10 rounded-full flex items-center justify-center',
+                category.type === 'INCOME' ? 'bg-green-100' : 'bg-red-100'
+              ]"
+            >
+              <svg 
+                :class="category.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
+                class="w-5 h-5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                v-html="getIconSvg(category.icon)"
+              ></svg>
+            </div>
+            <div>
+              <p class="font-medium text-gray-800">{{ category.name }}</p>
+              <div class="flex items-center space-x-2">
+                <span
+                  :class="[
+                    'text-xs px-2 py-0.5 rounded-full',
+                    category.type === 'INCOME' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  ]"
+                >
+                  {{ category.type }}
+                </span>
+                <span v-if="category.is_global" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  Global
+                </span>
+                <span v-else class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                  Custom
+                </span>
+              </div>
             </div>
           </div>
+          <button
+            v-if="!category.is_global"
+            @click="openDeleteModal(category)"
+            class="text-red-500 hover:text-red-700 p-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
-        <button
-          v-if="!category.is_global"
-          @click="openDeleteModal(category)"
-          class="text-red-500 hover:text-red-700 p-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
       </div>
-    </div>
 
-    <p v-if="filteredCategories.length === 0" class="text-center text-gray-500 py-12">
-      No categories found.
-    </p>
+      <p v-if="filteredCategories.length === 0" class="text-center text-gray-500 py-12">
+        No categories found.
+      </p>
+    </phantom-ui>
 
     <!-- Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

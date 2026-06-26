@@ -315,56 +315,55 @@ onMounted(() => {
         </p>
       </div>
 
-      <div v-if="loading" class="flex items-center justify-center h-64">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
+      <phantom-ui :loading="loading" animation="shimmer">
+        <div v-if="breakdown.length === 0 && !loading" class="flex flex-col items-center justify-center h-64 text-gray-500">
+          <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p>No {{ transactionType.toLowerCase() }} data for this period</p>
+        </div>
 
-      <div v-else-if="breakdown.length === 0" class="flex flex-col items-center justify-center h-64 text-gray-500">
-        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        <p>No {{ transactionType.toLowerCase() }} data for this period</p>
-      </div>
+        <div v-else>
+          <HorizontalBarChart
+            :labels="chartLabels"
+            :data="chartData"
+          />
 
-      <HorizontalBarChart
-        v-else
-        :labels="chartLabels"
-        :data="chartData"
-      />
+          <!-- Category List -->
+          <div v-if="breakdown.length > 0" class="mt-6 border-t pt-4 w-full overflow-hidden">
+            <div class="space-y-2">
+              <div
+                v-for="(item, index) in breakdown"
+                :key="item.name"
+                class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 gap-2"
+              >
+                <!-- Left Side: Index & Name -->
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <span class="w-6 text-center text-sm text-gray-400 flex-shrink-0">{{ index + 1 }}</span>
+                  <span class="font-medium text-gray-800 truncate" :title="item.name">{{ item.name }}</span>
+                </div>
 
-      <!-- Category List -->
-      <div v-if="breakdown.length > 0" class="mt-6 border-t pt-4 w-full overflow-hidden">
-        <div class="space-y-2">
-          <div
-            v-for="(item, index) in breakdown"
-            :key="item.name"
-            class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 gap-2"
-          >
-            <!-- Left Side: Index & Name -->
-            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <span class="w-6 text-center text-sm text-gray-400 flex-shrink-0">{{ index + 1 }}</span>
-              <span class="font-medium text-gray-800 truncate" :title="item.name">{{ item.name }}</span>
-            </div>
-
-            <!-- Right Side: Stats -->
-            <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <span class="text-sm text-gray-500 w-10 sm:w-12 text-right text-xs sm:text-sm">
-                {{ totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0 }}%
-              </span>
-              <div class="w-12 sm:w-24 bg-gray-200 rounded-full h-2">
-                <div
-                  class="h-2 rounded-full"
-                  :class="transactionType === 'EXPENSE' ? 'bg-red-500' : 'bg-green-500'"
-                  :style="{ width: (totalAmount > 0 ? (item.total / totalAmount) * 100 : 0) + '%' }"
-                ></div>
+                <!-- Right Side: Stats -->
+                <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                  <span class="text-sm text-gray-500 w-10 sm:w-12 text-right text-xs sm:text-sm">
+                    {{ totalAmount > 0 ? ((item.total / totalAmount) * 100).toFixed(1) : 0 }}%
+                  </span>
+                  <div class="w-12 sm:w-24 bg-gray-200 rounded-full h-2">
+                    <div
+                      class="h-2 rounded-full"
+                      :class="transactionType === 'EXPENSE' ? 'bg-red-500' : 'bg-green-500'"
+                      :style="{ width: (totalAmount > 0 ? (item.total / totalAmount) * 100 : 0) + '%' }"
+                    ></div>
+                  </div>
+                  <span class="font-semibold text-gray-800 w-24 sm:w-32 text-right whitespace-nowrap text-sm sm:text-base">
+                    {{ formatCurrency(item.total) }}
+                  </span>
+                </div>
               </div>
-              <span class="font-semibold text-gray-800 w-24 sm:w-32 text-right whitespace-nowrap text-sm sm:text-base">
-                {{ formatCurrency(item.total) }}
-              </span>
             </div>
           </div>
         </div>
-      </div>
+      </phantom-ui>
     </div>
 
     <!-- Cash Flow Trend Chart -->
@@ -372,23 +371,21 @@ onMounted(() => {
       <h2 class="text-lg font-semibold text-gray-800 mb-4">Cash Flow Trend</h2>
       <p class="text-sm text-gray-500 mb-4">Income vs Expense over time</p>
       
-      <div v-if="loading" class="flex items-center justify-center h-72">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-      
-      <div v-else-if="trendData.length === 0" class="flex flex-col items-center justify-center h-72 text-gray-500">
-        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-        </svg>
-        <p>No transaction data for this period</p>
-      </div>
-      
-      <CashFlowLineChart
-        v-else
-        :data="trendData"
-        :start-date="dateRange.start"
-        :end-date="dateRange.end"
-      />
+      <phantom-ui :loading="loading" animation="shimmer">
+        <div v-if="trendData.length === 0 && !loading" class="flex flex-col items-center justify-center h-72 text-gray-500">
+          <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+          </svg>
+          <p>No transaction data for this period</p>
+        </div>
+        
+        <CashFlowLineChart
+          v-else
+          :data="trendData"
+          :start-date="dateRange.start"
+          :end-date="dateRange.end"
+        />
+      </phantom-ui>
     </div>
 
     <!-- Monthly Comparison Chart (only for month view) -->
@@ -396,23 +393,21 @@ onMounted(() => {
       <h2 class="text-lg font-semibold text-gray-800 mb-2">Monthly Comparison</h2>
       <p class="text-sm text-gray-500 mb-4">This month vs last month expenses by category</p>
       
-      <div v-if="loading" class="flex items-center justify-center h-80">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-      
-      <div v-else-if="comparisonData.length === 0" class="flex flex-col items-center justify-center h-80 text-gray-500">
-        <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        <p>No comparison data available</p>
-      </div>
-      
-      <ComparativeChart
-        v-else
-        :data="comparisonData"
-        :current-label="format(selectedDate, 'MMM yyyy', { locale: id })"
-        :prev-label="format(subMonths(selectedDate, 1), 'MMM yyyy', { locale: id })"
-      />
+      <phantom-ui :loading="loading" animation="shimmer">
+        <div v-if="comparisonData.length === 0 && !loading" class="flex flex-col items-center justify-center h-80 text-gray-500">
+          <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p>No comparison data available</p>
+        </div>
+        
+        <ComparativeChart
+          v-else
+          :data="comparisonData"
+          :current-label="format(selectedDate, 'MMM yyyy', { locale: id })"
+          :prev-label="format(subMonths(selectedDate, 1), 'MMM yyyy', { locale: id })"
+        />
+      </phantom-ui>
     </div>
   </div>
 </template>
