@@ -23,7 +23,7 @@ class AnalyticsRepository:
               AND t.type = $2
               AND t.transaction_date >= $3
               AND t.transaction_date <= $4
-              AND LOWER(c.name) <> 'transfer'
+              AND NOT c.is_system
             GROUP BY c.id, c.name, c.icon
             HAVING SUM(t.amount) > 0
             ORDER BY total DESC
@@ -49,7 +49,7 @@ class AnalyticsRepository:
               AND t.type = $2
               AND t.transaction_date >= $3
               AND t.transaction_date <= $4
-              AND LOWER(c.name) <> 'transfer'
+              AND NOT c.is_system
             GROUP BY w.id, w.name, w.icon
             HAVING SUM(t.amount) > 0
             ORDER BY total DESC
@@ -89,8 +89,8 @@ class AnalyticsRepository:
         row = await self.conn.fetchrow(
             """
             SELECT 
-                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_expense,
+                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_expense,
                 COUNT(*) as transaction_count
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
@@ -108,7 +108,7 @@ class AnalyticsRepository:
         start_date: date,
         end_date: date
     ) -> List[dict]:
-        """Fetch daily totals for Income and Expense, excluding Transfer category."""
+        """Fetch daily totals for Income and Expense, excluding system categories."""
         rows = await self.conn.fetch(
             """
             SELECT 
@@ -120,7 +120,7 @@ class AnalyticsRepository:
             WHERE t.user_id = $1
               AND t.transaction_date >= $2
               AND t.transaction_date <= $3
-              AND LOWER(c.name) <> 'transfer'
+              AND NOT c.is_system
             GROUP BY day, t.type
             ORDER BY day ASC
             """,
@@ -151,7 +151,7 @@ class AnalyticsRepository:
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1
               AND t.type = 'EXPENSE'
-              AND LOWER(c.name) <> 'transfer'
+              AND NOT c.is_system
               AND (
                   (t.transaction_date >= $2 AND t.transaction_date <= $3) OR
                   (t.transaction_date >= $4 AND t.transaction_date <= $5)
