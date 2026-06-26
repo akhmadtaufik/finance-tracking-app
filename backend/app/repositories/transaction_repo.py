@@ -96,16 +96,14 @@ class TransactionRepository:
             param_idx += 1
 
         if has_date_filter:
-            # Scenario A: Date filter active - fetch ALL matching rows (no LIMIT)
+            # Scenario A: Date filter active
             base_query += f" AND t.transaction_date >= ${param_idx} AND t.transaction_date <= ${param_idx + 1}"
             params.extend([start_date, end_date])
-            base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
-            # NO LIMIT - return all transactions in date range
-        else:
-            # Scenario B: No date filter - apply LIMIT for recent transactions
-            base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
-            base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
-            params.extend([limit, offset])
+            param_idx += 2
+
+        base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
+        base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
+        params.extend([limit, offset])
 
         rows = await self.conn.fetch(base_query, *params)
         return [dict(row) for row in rows]
@@ -114,8 +112,8 @@ class TransactionRepository:
         row = await self.conn.fetchrow(
             """
             SELECT 
-                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND LOWER(c.name) <> 'transfer' THEN t.amount ELSE 0 END), 0) as total_expense
+                COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND NOT c.is_system THEN t.amount ELSE 0 END), 0) as total_expense
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = $1
@@ -177,9 +175,9 @@ class TransactionRepository:
             if not category:
                 category = await self.conn.fetchrow(
                     """
-                    INSERT INTO categories (user_id, name, type, icon)
-                    VALUES (NULL, 'Transfer', 'EXPENSE', 'repeat')
-                    ON CONFLICT (user_id, name, type) DO UPDATE SET icon = 'repeat'
+                    INSERT INTO categories (user_id, name, type, icon, is_system)
+                    VALUES (NULL, 'Transfer', 'EXPENSE', 'repeat', TRUE)
+                    ON CONFLICT (user_id, name, type) DO UPDATE SET icon = 'repeat', is_system = TRUE
                     RETURNING id
                     """
                 )
@@ -364,27 +362,34 @@ class TransactionRepository:
             return dict(row) if row else None
 
     async def get_distinct_descriptions(
-        self, user_id: int, category_id: Optional[int] = None, limit: int = 50
+        self, user_id: int, category_id: Optional[int] = None, search_term: Optional[str] = None
     ) -> list[str]:
         """
         Fetch unique descriptions for a user for autocomplete suggestions.
-        Optionally filter by category_id for context-aware suggestions.
+        Optionally filter by category_id or search_term for context-aware suggestions.
+        Ordered by usage frequency and recency.
         """
         query = """
-            SELECT DISTINCT description 
+            SELECT description 
             FROM transactions 
             WHERE user_id = $1 
               AND description IS NOT NULL 
               AND description != ''
         """
         params = [user_id]
+        param_idx = 2
 
         if category_id is not None:
-            query += " AND category_id = $2"
+            query += f" AND category_id = ${param_idx}"
             params.append(category_id)
+            param_idx += 1
 
-        query += " ORDER BY description ASC LIMIT $" + str(len(params) + 1)
-        params.append(limit)
+        if search_term is not None:
+            query += f" AND description ILIKE ${param_idx}"
+            params.append(f"%{search_term}%")
+            param_idx += 1
+
+        query += " GROUP BY description ORDER BY COUNT(id) DESC, MAX(transaction_date) DESC"
 
         rows = await self.conn.fetch(query, *params)
         return [row["description"] for row in rows]
