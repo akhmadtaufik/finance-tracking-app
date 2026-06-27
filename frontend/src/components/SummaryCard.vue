@@ -2,49 +2,49 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  variant: {
-    type: String,
-    default: 'default'
-  },
-  isLoading: {
-    type: Boolean,
-    default: false
-  }
+ title: {
+ type: String,
+ required: true
+ },
+ amount: {
+ type: Number,
+ required: true
+ },
+ variant: {
+ type: String,
+ default: 'default'
+ },
+ isLoading: {
+ type: Boolean,
+ default: false
+ }
 })
 
 const formattedAmount = computed(() => new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  minimumFractionDigits: 0
+ style: 'currency',
+ currency: 'IDR',
+ minimumFractionDigits: 0
 }).format(props.amount))
 
 const variantClasses = computed(() => {
   switch (props.variant) {
     case 'income':
-      return 'text-green-600'
+      return 'text-pale-green'
     case 'expense':
-      return 'text-red-600'
+      return 'text-coral-soft'
     case 'net':
-      return ''
+      return 'text-on-dark'
     default:
-      return 'text-gray-800'
+      return 'text-on-dark'
   }
 })
 </script>
 
 <template>
-  <div class="bg-white rounded-lg shadow p-6" data-testid="summary-card">
-    <p class="text-sm font-medium text-gray-500">{{ title }}</p>
+  <div class="bg-white/5 border border-white/10 rounded-sm p-6" data-testid="summary-card">
+    <p class="text-sm font-medium text-pale-green">{{ title }}</p>
     <phantom-ui :loading="isLoading" animation="shimmer">
-      <p class="text-2xl font-bold" :class="variantClasses">
+      <p class="text-2xl font-bold mt-2" :class="variantClasses">
         {{ formattedAmount }}
       </p>
     </phantom-ui>
