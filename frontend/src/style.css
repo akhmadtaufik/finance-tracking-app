@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply bg-canvas text-ink font-body;
+  }
+  h1, h2, h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
 .skip-link {
   position: absolute;
   left: -999px;
