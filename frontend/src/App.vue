@@ -99,7 +99,7 @@ const isActive = (path) => {
  @mouseenter="sidebarExpanded = true"
  @mouseleave="sidebarExpanded = false"
  :class="[
- 'hidden md:flex fixed left-0 top-0 h-full bg-white z-40 transition-all duration-300 ease-in-out flex-col',
+ 'hidden lg:flex fixed left-0 top-0 h-full bg-white z-40 transition-all duration-300 ease-in-out flex-col',
  sidebarExpanded ? 'w-64' : 'w-16',
  ]"
  >
@@ -267,8 +267,8 @@ const isActive = (path) => {
  role="main"
  tabindex="-1"
  :class="[
- 'transition-all duration-300 focus:outline-none pt-4 pb-24 md:pb-0',
- showSidebar ? 'md:ml-16' : '',
+ 'transition-all duration-300 focus:outline-none pt-4 pb-24 lg:pb-0',
+ showSidebar ? 'lg:ml-16' : '',
  ]"
  >
  <ErrorBoundary>
