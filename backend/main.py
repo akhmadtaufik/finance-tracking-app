@@ -81,6 +81,17 @@ app.add_middleware(
     expose_headers=["X-Request-ID"],
 )
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # Basic CSP, allowing data: and external links if necessary, but strictly self by default
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000"
+    return response
+
 # Exception Handlers
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(
