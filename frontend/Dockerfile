@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with Nginx
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:alpine
 
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
@@ -27,8 +27,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Expose port
-EXPOSE 80
+# Expose ports
+EXPOSE 8080
+EXPOSE 8443
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
