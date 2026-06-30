@@ -1,13 +1,10 @@
 import axios from 'axios'
 import { pinia } from '../stores'
 import { useUIStore } from '../stores/ui'
+import { useAuthStore } from '../stores/auth'
 import logger, { setRequestId } from '../services/logger'
 
 axios.defaults.withCredentials = true
-const existingToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-if (existingToken) {
-  axios.defaults.headers.common.Authorization = `Bearer ${existingToken}`
-}
 
 // Use /api for Docker (Nginx proxies to backend)
 // Use http://localhost:8000 for local development
@@ -63,10 +60,7 @@ api.interceptors.request.use(
   (config) => {
     uiStore.startLoading()
     config._startTime = Date.now()
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
+    // Token is injected via api.defaults.headers by authStore, no need to read localStorage
     return config
   },
   (error) => {
@@ -102,7 +96,6 @@ api.interceptors.response.use(
       
       // Jika ini adalah request ke /auth/refresh yang gagal, langsung redirect
       if (originalRequest.url?.includes('/auth/refresh')) {
-        localStorage.removeItem('token')
         window.location.href = '/login'
         return Promise.reject(error)
       }
@@ -124,11 +117,11 @@ api.interceptors.response.use(
         // Panggil refresh endpoint - cookie terkirim otomatis
         const { data } = await api.post('/auth/refresh')
         
-        // Simpan token baru
+        // Simpan token baru di memory
         const newToken = data.access_token
-        localStorage.setItem('token', newToken)
         api.defaults.headers.common.Authorization = `Bearer ${newToken}`
         axios.defaults.headers.common.Authorization = `Bearer ${newToken}`
+        useAuthStore(pinia).setToken(newToken)
         
         // Proses antrian request yang menunggu
         processQueue(null, newToken)
@@ -140,7 +133,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh gagal - hapus token dan redirect ke login
         processQueue(refreshError, null)
-        localStorage.removeItem('token')
+        useAuthStore(pinia).clearToken()
         delete api.defaults.headers.common.Authorization
         delete axios.defaults.headers.common.Authorization
         window.location.href = '/login'
