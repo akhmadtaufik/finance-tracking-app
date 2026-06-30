@@ -12,11 +12,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chmod 777 /app/logs
+# Create non-root user and logs directory
+RUN useradd -m -s /bin/bash appuser && \
+    mkdir -p /app/logs && \
+    chown -R appuser:appuser /app
 
 # Copy application code into backend folder structure
 COPY . ./backend/
+
+# Ensure all files are owned by appuser
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
