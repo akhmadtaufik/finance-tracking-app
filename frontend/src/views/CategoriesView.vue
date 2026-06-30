@@ -98,10 +98,10 @@ const confirmDelete = async () => {
 <template>
  <div class="max-w-4xl mx-auto px-4 py-8">
  <div class="flex justify-between items-center mb-8">
- <h1 class="text-2xl font-bold text-gray-800">Categories</h1>
+ <h1 class="font-display text-4xl tracking-tight text-ink">Categories</h1>
  <button
  @click="openModal"
- class="px-4 py-2 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
+ class="bg-primary text-on-primary rounded-pill px-6 py-2.5 font-medium text-sm hover:opacity-90 transition-opacity"
  >
  + Add Category
  </button>
@@ -112,29 +112,26 @@ const confirmDelete = async () => {
  <button
  @click="activeTab = 'ALL'"
  :class="[
- 'px-4 py-2 rounded-md font-medium',
- activeTab === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+ activeTab === 'ALL' ? 'bg-coral text-canvas font-medium rounded-pill px-5 py-2 transition-colors' : 'bg-transparent text-slate hover:text-ink font-medium rounded-pill px-5 py-2 transition-colors'
  ]"
  >
- All ({{ financeStore.categories.length }})
+ All <span class="opacity-60 text-sm">({{ financeStore.categories.length }})</span>
  </button>
  <button
  @click="activeTab = 'INCOME'"
  :class="[
- 'px-4 py-2 rounded-md font-medium',
- activeTab === 'INCOME' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+ activeTab === 'INCOME' ? 'bg-coral text-canvas font-medium rounded-pill px-5 py-2 transition-colors' : 'bg-transparent text-slate hover:text-ink font-medium rounded-pill px-5 py-2 transition-colors'
  ]"
  >
- Income ({{ incomeCategories.length }})
+ Income <span class="opacity-60 text-sm">({{ incomeCategories.length }})</span>
  </button>
  <button
  @click="activeTab = 'EXPENSE'"
  :class="[
- 'px-4 py-2 rounded-md font-medium',
- activeTab === 'EXPENSE' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+ activeTab === 'EXPENSE' ? 'bg-coral text-canvas font-medium rounded-pill px-5 py-2 transition-colors' : 'bg-transparent text-slate hover:text-ink font-medium rounded-pill px-5 py-2 transition-colors'
  ]"
  >
- Expense ({{ expenseCategories.length }})
+ Expense <span class="opacity-60 text-sm">({{ expenseCategories.length }})</span>
  </button>
  </div>
 
@@ -144,17 +141,16 @@ const confirmDelete = async () => {
  <div
  v-for="category in filteredCategories"
  :key="category.id"
- class="bg-canvas border border-card-border rounded-lg p-4 flex items-center justify-between"
+ class="bg-canvas border border-card-border rounded-lg p-5 flex items-center justify-between hover:border-ink transition-colors"
  >
  <div class="flex items-center space-x-3">
  <div
  :class="[
- 'w-10 h-10 rounded-full flex items-center justify-center',
- category.type === 'INCOME' ? 'bg-green-100' : 'bg-red-100'
+ 'w-12 h-12 flex items-center justify-center border border-hairline rounded-md',
+ category.type === 'INCOME' ? 'text-deep-green' : 'text-coral'
  ]"
  >
  <svg 
- :class="category.type === 'INCOME' ? 'text-green-600' : 'text-red-600'"
  class="w-5 h-5" 
  fill="none" 
  stroke="currentColor" 
@@ -163,20 +159,20 @@ const confirmDelete = async () => {
  ></svg>
  </div>
  <div>
- <p class="font-medium text-gray-800">{{ category.name }}</p>
- <div class="flex items-center space-x-2">
+ <p class="font-body font-medium text-lg text-ink">{{ category.name }}</p>
+ <div class="flex items-center space-x-2 mt-1">
  <span
  :class="[
- 'text-xs px-2 py-0.5 rounded-full',
- category.type === 'INCOME' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+ 'bg-transparent border rounded-sm px-2 py-0.5 font-mono text-xs uppercase tracking-wider',
+ category.type === 'INCOME' ? 'border-deep-green text-deep-green' : 'border-coral text-coral'
  ]"
  >
  {{ category.type }}
  </span>
- <span v-if="category.is_global" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+ <span v-if="category.is_global" class="bg-transparent border rounded-sm px-2 py-0.5 font-mono text-xs uppercase tracking-wider border-slate text-slate">
  Global
  </span>
- <span v-else class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+ <span v-else class="bg-transparent border rounded-sm px-2 py-0.5 font-mono text-xs uppercase tracking-wider border-slate text-slate">
  Custom
  </span>
  </div>
@@ -185,7 +181,7 @@ const confirmDelete = async () => {
  <button
  v-if="!category.is_global"
  @click="openDeleteModal(category)"
- class="text-red-500 hover:text-red-700 p-2"
+ class="text-slate hover:text-error transition-colors p-2"
  >
  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
