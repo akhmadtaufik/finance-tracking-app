@@ -13,7 +13,7 @@ import asyncpg
 from .config import settings
 from .database import get_db_conn
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12, deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
