@@ -4,7 +4,15 @@ import api from '../api'
 import axios from 'axios'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token') || null)
+  const token = ref(null)
+
+  function setToken(newToken) {
+    token.value = newToken
+  }
+
+  function clearToken() {
+    token.value = null
+  }
   const user = ref(null)
   const sessions = ref([])
 
@@ -21,7 +29,6 @@ export const useAuthStore = defineStore('auth', () => {
     })
     
     token.value = response.data.access_token
-    localStorage.setItem('token', token.value)
     api.defaults.headers.common.Authorization = `Bearer ${token.value}`
     axios.defaults.headers.common.Authorization = `Bearer ${token.value}`
     
@@ -62,7 +69,6 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = null
       user.value = null
       sessions.value = []
-      localStorage.removeItem('token')
       delete api.defaults.headers.common.Authorization
       delete axios.defaults.headers.common.Authorization
     }
@@ -75,7 +81,6 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = null
       user.value = null
       sessions.value = []
-      localStorage.removeItem('token')
       delete api.defaults.headers.common.Authorization
       delete axios.defaults.headers.common.Authorization
       return response.data
@@ -110,9 +115,16 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
-  // Auto fetch user jika ada token tersimpan
-  if (token.value) {
-    fetchUser()
+  async function initialize() {
+    try {
+      const response = await api.post('/auth/refresh')
+      token.value = response.data.access_token
+      api.defaults.headers.common.Authorization = `Bearer ${token.value}`
+      axios.defaults.headers.common.Authorization = `Bearer ${token.value}`
+      await fetchUser()
+    } catch (error) {
+      console.log('No active session on initialize')
+    }
   }
 
   return {
@@ -128,6 +140,9 @@ export const useAuthStore = defineStore('auth', () => {
     logoutAllDevices,
     fetchSessions,
     updateProfile,
-    changePassword
+    changePassword,
+    setToken,
+    clearToken,
+    initialize
   }
 })
