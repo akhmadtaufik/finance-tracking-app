@@ -5,9 +5,14 @@ import './style.css'
 import { pinia } from './stores'
 import '@aejkatappaja/phantom-ui'
 
+import { useAuthStore } from './stores/auth'
+
 const app = createApp(App)
 
 app.use(pinia)
-app.use(router)
 
-app.mount('#app')
+const authStore = useAuthStore()
+authStore.initialize().finally(() => {
+  app.use(router)
+  app.mount('#app')
+})
