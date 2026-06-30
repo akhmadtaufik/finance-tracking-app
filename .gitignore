@@ -83,3 +83,7 @@ coverage/
 *.bak
 *.tmp
 *.temp
+
+# Other
+.agents/
+DESIGN.md
