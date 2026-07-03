@@ -6,14 +6,11 @@ import { useUIStore } from '@/stores/ui'
 import WalletSelector from '@/components/inputs/WalletSelector.vue'
 import CategorySelector from '@/components/inputs/CategorySelector.vue'
 import CurrencyInput from '@/components/CurrencyInput.vue'
-import axios from 'axios'
+import api from '@/api'
 
 // Store & Router
 const uiStore = useUIStore()
 const router = useRouter()
-
-// Constants
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000' // Adjust as needed or use configured axios instance
 
 // State
 const step = ref('upload') // 'upload' | 'review'
@@ -47,12 +44,7 @@ onMounted(async () => {
 
 const fetchWallets = async () => {
  try {
- // Assuming auth token is handled by interceptor or we need to add it manually
- // For now using simple axios call, modify if you have a configured api client
- const token = localStorage.getItem('token')
- const headers = { Authorization: `Bearer ${token}` }
-
- const res = await axios.get(`${API_URL}/wallets`, { headers })
+ const res = await api.get('/wallets')
  wallets.value = res.data
 
  // Auto-select first wallet if available
@@ -66,9 +58,7 @@ const fetchWallets = async () => {
 
 const fetchCategories = async () => {
  try {
- const token = localStorage.getItem('token')
- const headers = { Authorization: `Bearer ${token}` }
- const res = await axios.get(`${API_URL}/categories`, { headers })
+ const res = await api.get('/categories')
  // Filter only EXPENSE categories for receipts
  categories.value = res.data.filter((c) => c.type === 'EXPENSE')
  } catch (error) {
@@ -91,13 +81,9 @@ const handleFileUpload = async (event) => {
  formData.append('file', file)
 
  try {
- const token = localStorage.getItem('token')
- const headers = {
- Authorization: `Bearer ${token}`,
- 'Content-Type': 'multipart/form-data'
- }
-
- const { data } = await axios.post(`${API_URL}/receipts/scan`, formData, { headers })
+ const { data } = await api.post('/receipts/scan', formData, {
+   headers: { 'Content-Type': 'multipart/form-data' }
+ })
 
  // Success handling
  if (data.date) receiptDate.value = data.date
@@ -197,9 +183,6 @@ const saveTransactions = async () => {
  isLoading.value = true
 
  try {
- const token = localStorage.getItem('token')
- const headers = { Authorization: `Bearer ${token}` }
-
  const payload = scannedItems.value.map((item) => ({
  wallet_id: selectedWalletId.value,
  category_id: item.category_id,
@@ -209,7 +192,7 @@ const saveTransactions = async () => {
  description: item.name
  }))
 
- await axios.post(`${API_URL}/transactions/batch`, payload, { headers })
+ await api.post('/transactions/batch', payload)
 
  uiStore.showToast({
  message: 'Berhasil menyimpan transaksi!',
