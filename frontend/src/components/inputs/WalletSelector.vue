@@ -33,34 +33,41 @@ const getWalletInitials = (name) => name.substring(0, 3).toUpperCase()
 </script>
 
 <template>
- <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
- <button
- v-for="wallet in wallets"
- :key="wallet.id"
- type="button"
- @click="selectWallet(wallet.id)"
- :class="[
- 'p-3 rounded-xl text-left transition-all duration-150 cursor-pointer',
- modelValue === wallet.id
- ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 '
- : 'bg-white border border-gray-200 hover: hover:border-gray-300'
- ]"
- >
- <div class="flex items-center gap-3">
- <div 
- class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
- :style="{ backgroundColor: getWalletColor(wallet.icon) }"
- >
- {{ getWalletInitials(wallet.name) }}
- </div>
- <div class="min-w-0">
- <p class="text-sm font-semibold text-gray-800 truncate">{{ wallet.name }}</p>
- <p class="text-sm text-gray-500">{{ formatCurrency(wallet.balance) }}</p>
- </div>
- </div>
- </button>
- </div>
- <p v-if="wallets.length === 0" class="text-sm text-gray-400 text-center py-4">
- No wallets available
- </p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+    <button
+      v-for="wallet in wallets"
+      :key="wallet.id"
+      type="button"
+      :class="[
+        'p-3 rounded-xl text-left transition-all duration-150 cursor-pointer',
+        modelValue === wallet.id
+          ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 '
+          : 'bg-white border border-gray-200 hover: hover:border-gray-300'
+      ]"
+      @click="selectWallet(wallet.id)"
+    >
+      <div class="flex items-center gap-3">
+        <div 
+          class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
+          :style="{ backgroundColor: getWalletColor(wallet.icon) }"
+        >
+          {{ getWalletInitials(wallet.name) }}
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-gray-800 truncate">
+            {{ wallet.name }}
+          </p>
+          <p class="text-sm text-gray-500">
+            {{ formatCurrency(wallet.balance) }}
+          </p>
+        </div>
+      </div>
+    </button>
+  </div>
+  <p
+    v-if="wallets.length === 0"
+    class="text-sm text-gray-400 text-center py-4"
+  >
+    No wallets available
+  </p>
 </template>

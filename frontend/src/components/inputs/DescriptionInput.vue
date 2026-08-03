@@ -101,32 +101,35 @@ onUnmounted(() => {
 </script>
 
 <template>
- <div class="relative" ref="containerRef">
- <input
- ref="inputRef"
- :value="modelValue"
- @input="handleInput"
- @focus="handleFocus"
- type="text"
- class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
- :placeholder="placeholder"
- />
+  <div
+    ref="containerRef"
+    class="relative"
+  >
+    <input
+      ref="inputRef"
+      :value="modelValue"
+      type="text"
+      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      :placeholder="placeholder"
+      @input="handleInput"
+      @focus="handleFocus"
+    >
  
- <!-- Dropdown -->
- <div 
- v-if="showDropdown"
- class="absolute z-50 w-full mt-1 bg-white rounded-md max-h-60 overflow-auto border border-gray-200"
- >
- <ul class="py-1">
- <li 
- v-for="suggestion in filteredSuggestions" 
- :key="suggestion"
- @mousedown.prevent="selectSuggestion(suggestion)"
- class="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 transition-colors duration-150"
- >
- {{ suggestion }}
- </li>
- </ul>
- </div>
- </div>
+    <!-- Dropdown -->
+    <div 
+      v-if="showDropdown"
+      class="absolute z-50 w-full mt-1 bg-white rounded-md max-h-60 overflow-auto border border-gray-200"
+    >
+      <ul class="py-1">
+        <li 
+          v-for="suggestion in filteredSuggestions" 
+          :key="suggestion"
+          class="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700 transition-colors duration-150"
+          @mousedown.prevent="selectSuggestion(suggestion)"
+        >
+          {{ suggestion }}
+        </li>
+      </ul>
+    </div>
+  </div>
 </template>
