@@ -68,110 +68,121 @@ const handleSubmit = async () => {
 </script>
 
 <template>
- <div class="max-w-2xl mx-auto px-4 py-8">
- <h1 class="text-2xl font-bold text-gray-800 mb-8">Add Transaction</h1>
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-8">
+      Add Transaction
+    </h1>
  
- <div class="bg-canvas border border-card-border rounded-lg p-6">
- <form @submit.prevent="handleSubmit" class="space-y-6">
- <div v-if="error" class="bg-red-50 text-red-600 p-3 rounded-md text-sm">
- {{ error }}
- </div>
+    <div class="bg-canvas border border-card-border rounded-lg p-6">
+      <form
+        class="space-y-6"
+        @submit.prevent="handleSubmit"
+      >
+        <div
+          v-if="error"
+          class="bg-red-50 text-red-600 p-3 rounded-md text-sm"
+        >
+          {{ error }}
+        </div>
 
- <!-- Transaction Type Toggle -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
- <div class="flex space-x-4">
- <button
- type="button"
- @click="type = 'INCOME'"
- :class="[
- 'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
- type === 'INCOME' 
- ? 'bg-green-600 text-white' 
- : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
- ]"
- >
- Income
- </button>
- <button
- type="button"
- @click="type = 'EXPENSE'"
- :class="[
- 'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
- type === 'EXPENSE' 
- ? 'bg-red-600 text-white' 
- : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
- ]"
- >
- Expense
- </button>
- </div>
- </div>
+        <!-- Transaction Type Toggle -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+          <div class="flex space-x-4">
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                type === 'INCOME' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              @click="type = 'INCOME'"
+            >
+              Income
+            </button>
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-3 px-4 rounded-lg font-medium transition-colors',
+                type === 'EXPENSE' 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              @click="type = 'EXPENSE'"
+            >
+              Expense
+            </button>
+          </div>
+        </div>
 
- <!-- Amount -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
- <CurrencyInput v-model="amount" placeholder="0" />
- </div>
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+          <CurrencyInput
+            v-model="amount"
+            placeholder="0"
+          />
+        </div>
 
- <!-- Wallet -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
- <WalletSelector 
- :wallets="financeStore.wallets" 
- v-model="walletId" 
- />
- </div>
+        <!-- Wallet -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
+          <WalletSelector 
+            v-model="walletId" 
+            :wallets="financeStore.wallets" 
+          />
+        </div>
 
- <!-- Category -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
- <CategorySelector 
- :categories="filteredCategories" 
- v-model="categoryId" 
- :current-type="type"
- />
- </div>
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          <CategorySelector 
+            v-model="categoryId" 
+            :categories="filteredCategories" 
+            :current-type="type"
+          />
+        </div>
 
- <!-- Date -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
- <input
- v-model="transactionDate"
- type="date"
- required
- class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
- />
- </div>
+        <!-- Date -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input
+            v-model="transactionDate"
+            type="date"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+        </div>
 
- <!-- Description -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
- <DescriptionInput
- v-model="description"
- :category-id="categoryId"
- placeholder="Enter description..."
- />
- </div>
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+          <DescriptionInput
+            v-model="description"
+            :category-id="categoryId"
+            placeholder="Enter description..."
+          />
+        </div>
 
- <!-- Actions -->
- <div class="flex space-x-4">
- <button
- type="button"
- @click="router.push('/')"
- class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
- >
- Cancel
- </button>
- <button
- type="submit"
- :disabled="loading"
- class="flex-1 py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
- >
- {{ loading ? 'Saving...' : 'Save Transaction' }}
- </button>
- </div>
- </form>
- </div>
- </div>
+        <!-- Actions -->
+        <div class="flex space-x-4">
+          <button
+            type="button"
+            class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+            @click="router.push('/')"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="flex-1 py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
+          >
+            {{ loading ? 'Saving...' : 'Save Transaction' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </template>
