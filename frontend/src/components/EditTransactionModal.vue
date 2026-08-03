@@ -123,114 +123,138 @@ const formatCurrency = (value) => {
 </script>
 
 <template>
- <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
- <div class="bg-canvas border border-card-border rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
- <div class="flex items-center justify-between mb-4">
- <h2 class="text-xl font-bold text-gray-800">Edit Transaction</h2>
- <button @click="close" class="text-gray-400 hover:text-gray-600">
- <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
- </svg>
- </button>
- </div>
+  <div
+    v-if="show"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div class="bg-canvas border border-card-border rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-800">
+          Edit Transaction
+        </h2>
+        <button
+          class="text-gray-400 hover:text-gray-600"
+          @click="close"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
 
- <div v-if="error" class="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4">
- {{ error }}
- </div>
+      <div
+        v-if="error"
+        class="bg-red-50 text-red-600 p-3 rounded-md text-sm mb-4"
+      >
+        {{ error }}
+      </div>
 
- <div class="space-y-4">
- <!-- Transaction Type Toggle -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
- <div class="flex space-x-4">
- <button
- type="button"
- @click="type = 'INCOME'"
- :class="[
- 'flex-1 py-2 px-4 rounded-lg font-medium transition-colors',
- type === 'INCOME' 
- ? 'bg-green-600 text-white' 
- : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
- ]"
- >
- Income
- </button>
- <button
- type="button"
- @click="type = 'EXPENSE'"
- :class="[
- 'flex-1 py-2 px-4 rounded-lg font-medium transition-colors',
- type === 'EXPENSE' 
- ? 'bg-red-600 text-white' 
- : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
- ]"
- >
- Expense
- </button>
- </div>
- </div>
+      <div class="space-y-4">
+        <!-- Transaction Type Toggle -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+          <div class="flex space-x-4">
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors',
+                type === 'INCOME' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              @click="type = 'INCOME'"
+            >
+              Income
+            </button>
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-2 px-4 rounded-lg font-medium transition-colors',
+                type === 'EXPENSE' 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+              @click="type = 'EXPENSE'"
+            >
+              Expense
+            </button>
+          </div>
+        </div>
 
- <!-- Amount -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
- <CurrencyInput v-model="amount" placeholder="0" />
- </div>
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+          <CurrencyInput
+            v-model="amount"
+            placeholder="0"
+          />
+        </div>
 
- <!-- Wallet -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
- <WalletSelector 
- :wallets="wallets" 
- v-model="walletId" 
- />
- </div>
+        <!-- Wallet -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Wallet</label>
+          <WalletSelector 
+            v-model="walletId" 
+            :wallets="wallets" 
+          />
+        </div>
 
- <!-- Category -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
- <CategorySelector 
- :categories="filteredCategories" 
- v-model="categoryId" 
- :current-type="type"
- />
- </div>
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+          <CategorySelector 
+            v-model="categoryId" 
+            :categories="filteredCategories" 
+            :current-type="type"
+          />
+        </div>
 
- <!-- Date -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
- <input
- v-model="transactionDate"
- type="date"
- class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
- />
- </div>
+        <!-- Date -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input
+            v-model="transactionDate"
+            type="date"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+        </div>
 
- <!-- Description -->
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
- <DescriptionInput
- v-model="description"
- :category-id="categoryId"
- placeholder="Enter description..."
- />
- </div>
- </div>
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+          <DescriptionInput
+            v-model="description"
+            :category-id="categoryId"
+            placeholder="Enter description..."
+          />
+        </div>
+      </div>
 
- <div class="flex space-x-4 mt-6">
- <button
- @click="close"
- class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
- >
- Cancel
- </button>
- <button
- @click="handleSubmit"
- :disabled="loading"
- class="flex-1 py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
- >
- {{ loading ? 'Saving...' : 'Save Changes' }}
- </button>
- </div>
- </div>
- </div>
+      <div class="flex space-x-4 mt-6">
+        <button
+          class="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+          @click="close"
+        >
+          Cancel
+        </button>
+        <button
+          :disabled="loading"
+          class="flex-1 py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
+          @click="handleSubmit"
+        >
+          {{ loading ? 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
