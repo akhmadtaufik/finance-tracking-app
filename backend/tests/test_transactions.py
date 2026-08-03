@@ -108,6 +108,58 @@ class TestTransactions:
         assert response.status_code == 422
         assert "HTML/Script" in response.text
 
+    async def test_get_transactions_search_filter(
+        self, client: AsyncClient, auth_headers, setup_wallets, setup_category
+    ):
+        """Test filtering transactions by search query string."""
+        wallet_id = setup_wallets["wallet_a"]["id"]
+        category_id = setup_category["id"]
+
+        await client.post(
+            "/transactions",
+            json={
+                "wallet_id": wallet_id,
+                "category_id": category_id,
+                "amount": 25000,
+                "type": "EXPENSE",
+                "description": "UniqueSearchKeywordXYZ"
+            },
+            headers=auth_headers
+        )
+        await client.post(
+            "/transactions",
+            json={
+                "wallet_id": wallet_id,
+                "category_id": category_id,
+                "amount": 15000,
+                "type": "EXPENSE",
+                "description": "OtherRegularExpense"
+            },
+            headers=auth_headers
+        )
+
+        response = await client.get(
+            f"/transactions?wallet_id={wallet_id}&search=UniqueSearchKeywordXYZ",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["description"] == "UniqueSearchKeywordXYZ"
+
+    async def test_export_transactions_pdf(
+        self, client: AsyncClient, auth_headers, setup_wallets
+    ):
+        """Test exporting transactions report as a PDF document."""
+        wallet_id = setup_wallets["wallet_a"]["id"]
+        response = await client.get(
+            f"/transactions/export/pdf?wallet_id={wallet_id}",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        assert "application/pdf" in response.headers["content-type"]
+        assert len(response.content) > 0
+
 
 class TestTransferFunds:
     """Integration tests for wallet-to-wallet transfers."""
