@@ -11,33 +11,33 @@ const handleClose = () => {
 </script>
 
 <template>
- <transition name="fade">
- <div
- v-if="toast.visible"
- class="fixed top-4 right-4 z-50 max-w-sm w-full bg-canvas border border-card-border rounded-lg border border-gray-200 p-4 flex items-start gap-3"
- role="alert"
- aria-live="assertive"
- tabindex="0"
- >
- <div
- class="w-2 h-2 mt-2 rounded-full"
- :class="toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'"
- aria-hidden="true"
- ></div>
- <div class="flex-1">
- <p class="text-sm text-gray-800">
- {{ toast.message }}
- </p>
- </div>
- <button
- class="text-gray-400 hover:text-gray-600"
- @click="handleClose"
- aria-label="Close notification"
- >
- &times;
- </button>
- </div>
- </transition>
+  <transition name="fade">
+    <div
+      v-if="toast.visible"
+      class="fixed top-4 right-4 z-50 max-w-sm w-full bg-canvas border border-card-border rounded-lg border border-gray-200 p-4 flex items-start gap-3"
+      role="alert"
+      aria-live="assertive"
+      tabindex="0"
+    >
+      <div
+        class="w-2 h-2 mt-2 rounded-full"
+        :class="toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'"
+        aria-hidden="true"
+      />
+      <div class="flex-1">
+        <p class="text-sm text-gray-800">
+          {{ toast.message }}
+        </p>
+      </div>
+      <button
+        class="text-gray-400 hover:text-gray-600"
+        aria-label="Close notification"
+        @click="handleClose"
+      >
+        &times;
+      </button>
+    </div>
+  </transition>
 </template>
 
 <style scoped>
