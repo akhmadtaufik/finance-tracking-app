@@ -137,7 +137,10 @@ const chartOptions = {
 </script>
 
 <template>
- <div class="h-72">
- <Line :data="chartData" :options="chartOptions" />
- </div>
+  <div class="h-72">
+    <Line
+      :data="chartData"
+      :options="chartOptions"
+    />
+  </div>
 </template>

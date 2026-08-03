@@ -114,7 +114,13 @@ const chartOptions = {
 </script>
 
 <template>
- <div class="w-full" :style="{ height: Math.max(200, labels.length * 40) + 'px' }">
- <Bar :data="chartData" :options="chartOptions" />
- </div>
+  <div
+    class="w-full"
+    :style="{ height: Math.max(200, labels.length * 40) + 'px' }"
+  >
+    <Bar
+      :data="chartData"
+      :options="chartOptions"
+    />
+  </div>
 </template>
