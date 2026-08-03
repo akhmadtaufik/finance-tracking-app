@@ -1,11 +1,19 @@
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
  wallet: { type: Object, required: true },
  showDelete: { type: Boolean, default: false },
  isLoading: { type: Boolean, default: false }
 })
 
 defineEmits(['delete'])
+
+const router = useRouter()
+
+const navigateToDetail = () => {
+  router.push({ name: 'WalletDetail', params: { id: props.wallet.id } })
+}
 
 const walletColors = {
  'wallet': '#6366f1', 'cash': '#22c55e',
@@ -30,29 +38,47 @@ const formatCurrency = (value) => {
 </script>
 
 <template>
- <div class="bg-canvas border border-card-border rounded-lg p-6 flex flex-col gap-4 hover:border-ink transition-colors">
- <div class="flex items-center justify-between mb-3">
- <div 
- class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs"
- :style="{ backgroundColor: getWalletColor(wallet.icon) }"
- >
- {{ getWalletInitials(wallet.name) }}
- </div>
- <button
- v-if="showDelete"
- @click="$emit('delete', wallet)"
- class="text-slate hover:text-ink p-1 transition-colors"
- >
- <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
- </svg>
- </button>
- </div>
- <phantom-ui :loading="isLoading" animation="shimmer">
- <h3 class="text-sm font-semibold text-gray-800 truncate">{{ wallet.name }}</h3>
- <p class="text-ink font-display tracking-tight text-2xl">
- {{ formatCurrency(wallet.balance) }}
- </p>
- </phantom-ui>
- </div>
+  <div 
+    class="bg-canvas border border-card-border rounded-lg p-6 flex flex-col gap-4 hover:border-ink transition-colors cursor-pointer hover:shadow-sm"
+    @click="navigateToDetail"
+  >
+    <div class="flex items-center justify-between mb-3">
+      <div 
+        class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs"
+        :style="{ backgroundColor: getWalletColor(wallet.icon) }"
+      >
+        {{ getWalletInitials(wallet.name) }}
+      </div>
+      <button
+        v-if="showDelete"
+        class="text-slate hover:text-ink p-1 transition-colors"
+        @click.stop="$emit('delete', wallet)"
+      >
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </button>
+    </div>
+    <phantom-ui
+      :loading="isLoading"
+      animation="shimmer"
+    >
+      <h3 class="text-sm font-semibold text-gray-800 truncate">
+        {{ wallet.name }}
+      </h3>
+      <p class="text-ink font-display tracking-tight text-2xl">
+        {{ formatCurrency(wallet.balance) }}
+      </p>
+    </phantom-ui>
+  </div>
 </template>
