@@ -74,10 +74,10 @@ class TransactionRepository:
         trans_type: Optional[str] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
+        wallet_id: Optional[int] = None,
+        category_id: Optional[int] = None,
+        search: Optional[str] = None,
     ) -> List[dict]:
-        # Check if date filter is active
-        has_date_filter = start_date is not None and end_date is not None
-
         base_query = """
             SELECT t.id, t.user_id, t.wallet_id, t.category_id, t.amount, t.type,
                    t.transaction_date, t.description, t.created_at,
@@ -95,15 +95,36 @@ class TransactionRepository:
             params.append(trans_type)
             param_idx += 1
 
-        if has_date_filter:
-            # Scenario A: Date filter active
-            base_query += f" AND t.transaction_date >= ${param_idx} AND t.transaction_date <= ${param_idx + 1}"
-            params.extend([start_date, end_date])
-            param_idx += 2
+        if wallet_id:
+            base_query += f" AND t.wallet_id = ${param_idx}"
+            params.append(wallet_id)
+            param_idx += 1
+
+        if category_id:
+            base_query += f" AND t.category_id = ${param_idx}"
+            params.append(category_id)
+            param_idx += 1
+
+        if search:
+            base_query += f" AND (t.description ILIKE ${param_idx} OR c.name ILIKE ${param_idx})"
+            params.append(f"%{search}%")
+            param_idx += 1
+
+        if start_date is not None:
+            base_query += f" AND t.transaction_date >= ${param_idx}"
+            params.append(start_date)
+            param_idx += 1
+
+        if end_date is not None:
+            base_query += f" AND t.transaction_date <= ${param_idx}"
+            params.append(end_date)
+            param_idx += 1
 
         base_query += " ORDER BY t.transaction_date DESC, t.id DESC"
-        base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
-        params.extend([limit, offset])
+
+        if limit is not None:
+            base_query += f" LIMIT ${param_idx} OFFSET ${param_idx + 1}"
+            params.extend([limit, offset])
 
         rows = await self.conn.fetch(base_query, *params)
         return [dict(row) for row in rows]
