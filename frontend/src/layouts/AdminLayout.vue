@@ -38,71 +38,104 @@ const goBack = () => {
 </script>
 
 <template>
- <div class="min-h-screen bg-gray-100 flex">
- <!-- Sidebar -->
- <aside class="hidden lg:flex w-64 bg-gray-900 text-white flex-col">
- <!-- Header -->
- <div class="h-16 flex items-center px-6 border-b border-gray-800">
- <div class="flex items-center">
- <div class="w-8 h-8 bg-primary text-on-primary rounded-lg flex items-center justify-center">
- <svg class="w-5 h-5 text-on-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
- </svg>
- </div>
- <span class="ml-3 font-bold text-lg">Admin Panel</span>
- </div>
- </div>
+  <div class="min-h-screen bg-gray-100 flex">
+    <!-- Sidebar -->
+    <aside class="hidden lg:flex w-64 bg-gray-900 text-white flex-col">
+      <!-- Header -->
+      <div class="h-16 flex items-center px-6 border-b border-gray-800">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-primary text-on-primary rounded-lg flex items-center justify-center">
+            <svg
+              class="w-5 h-5 text-on-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+              />
+            </svg>
+          </div>
+          <span class="ml-3 font-bold text-lg">Admin Panel</span>
+        </div>
+      </div>
 
- <!-- Navigation -->
- <nav class="flex-1 py-4">
- <ul class="space-y-1 px-3">
- <li v-for="item in menuItems" :key="item.path">
- <router-link
- :to="item.path"
- :class="[
- 'flex items-center px-3 py-3 rounded-lg transition-colors duration-200',
- isActive(item)
- ? 'bg-soft-stone text-ink font-medium'
- : 'text-slate hover:bg-gray-800 hover:text-white'
- ]"
- >
- <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" v-html="item.icon"></svg>
- <span class="ml-3 font-medium">{{ item.name }}</span>
- </router-link>
- </li>
- </ul>
- </nav>
+      <!-- Navigation -->
+      <nav class="flex-1 py-4">
+        <ul class="space-y-1 px-3">
+          <li
+            v-for="item in menuItems"
+            :key="item.path"
+          >
+            <router-link
+              :to="item.path"
+              :class="[
+                'flex items-center px-3 py-3 rounded-lg transition-colors duration-200',
+                isActive(item)
+                  ? 'bg-soft-stone text-ink font-medium'
+                  : 'text-slate hover:bg-gray-800 hover:text-white'
+              ]"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                v-html="item.icon"
+              />
+              <span class="ml-3 font-medium">{{ item.name }}</span>
+            </router-link>
+          </li>
+        </ul>
+      </nav>
 
- <!-- Back to App -->
- <div class="p-4 border-t border-gray-800">
- <button
- @click="goBack"
- class="w-full flex items-center px-3 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
- >
- <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
- </svg>
- <span class="ml-3 font-medium">Back to App</span>
- </button>
- </div>
+      <!-- Back to App -->
+      <div class="p-4 border-t border-gray-800">
+        <button
+          class="w-full flex items-center px-3 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+          @click="goBack"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 17l-5-5m0 0l5-5m-5 5h12"
+            />
+          </svg>
+          <span class="ml-3 font-medium">Back to App</span>
+        </button>
+      </div>
 
- <!-- User Info -->
- <div class="p-4 border-t border-gray-800">
- <div class="flex items-center">
- <div class="w-8 h-8 bg-primary text-on-primary rounded-full flex items-center justify-center">
- <span class="text-sm font-bold">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</span>
- </div>
- <div class="ml-3">
- <p class="text-sm font-medium">{{ authStore.user?.username }}</p>
- <p class="text-xs text-gray-500">Administrator</p>
- </div>
- </div>
- </div>
- </aside>
+      <!-- User Info -->
+      <div class="p-4 border-t border-gray-800">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-primary text-on-primary rounded-full flex items-center justify-center">
+            <span class="text-sm font-bold">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</span>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm font-medium">
+              {{ authStore.user?.username }}
+            </p>
+            <p class="text-xs text-gray-500">
+              Administrator
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
 
- <!-- Main Content -->
- <main class="flex-1 overflow-auto">
- <router-view />
- </main>
- </div>
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto">
+      <router-view />
+    </main>
+  </div>
 </template>
