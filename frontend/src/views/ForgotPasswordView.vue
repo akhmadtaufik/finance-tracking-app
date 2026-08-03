@@ -35,64 +35,87 @@ const requestReset = async () => {
 </script>
 
 <template>
- <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
- <div class="max-w-md w-full bg-canvas border border-card-border rounded-lg p-8">
- <div class="text-center mb-8">
- <h1 class="text-2xl font-bold text-gray-800">Forgot Password</h1>
- <p class="text-gray-600 mt-2">
- Enter your email and we'll send you a reset link
- </p>
- </div>
+  <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div class="max-w-md w-full bg-canvas border border-card-border rounded-lg p-8">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">
+          Forgot Password
+        </h1>
+        <p class="text-gray-600 mt-2">
+          Enter your email and we'll send you a reset link
+        </p>
+      </div>
  
- <div v-if="!submitted">
- <form @submit.prevent="requestReset" class="space-y-6">
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">
- Email Address
- </label>
- <input
- v-model="email"
- type="email"
- required
- class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
- placeholder="Enter your email"
- />
- </div>
+      <div v-if="!submitted">
+        <form
+          class="space-y-6"
+          @submit.prevent="requestReset"
+        >
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              v-model="email"
+              type="email"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Enter your email"
+            >
+          </div>
  
- <button
- type="submit"
- :disabled="loading"
- class="w-full py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
- >
- {{ loading ? 'Sending...' : 'Send Reset Link' }}
- </button>
- </form>
- </div>
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full py-2 px-4 bg-primary text-on-primary rounded-pill px-6 py-3 font-medium text-sm"
+          >
+            {{ loading ? 'Sending...' : 'Send Reset Link' }}
+          </button>
+        </form>
+      </div>
  
- <div v-else class="text-center">
- <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
- <svg class="w-12 h-12 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
- <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
- </svg>
- <h3 class="font-semibold text-green-800 mb-2">Check Your Email</h3>
- <p class="text-green-700 text-sm">
- If an account exists for {{ email }}, you will receive a password reset link shortly.
- </p>
- </div>
+      <div
+        v-else
+        class="text-center"
+      >
+        <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+          <svg
+            class="w-12 h-12 text-green-500 mx-auto mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
+          </svg>
+          <h3 class="font-semibold text-green-800 mb-2">
+            Check Your Email
+          </h3>
+          <p class="text-green-700 text-sm">
+            If an account exists for {{ email }}, you will receive a password reset link shortly.
+          </p>
+        </div>
  
- <button
- @click="submitted = false; email = ''"
- class="text-indigo-600 hover:text-indigo-800 font-medium"
- >
- Try a different email
- </button>
- </div>
+        <button
+          class="text-indigo-600 hover:text-indigo-800 font-medium"
+          @click="submitted = false; email = ''"
+        >
+          Try a different email
+        </button>
+      </div>
  
- <div class="mt-6 text-center">
- <router-link to="/login" class="text-indigo-600 hover:text-indigo-800 font-medium">
- ← Back to Login
- </router-link>
- </div>
- </div>
- </div>
+      <div class="mt-6 text-center">
+        <router-link
+          to="/login"
+          class="text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          ← Back to Login
+        </router-link>
+      </div>
+    </div>
+  </div>
 </template>
