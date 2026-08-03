@@ -112,16 +112,16 @@ watch(() => props.modelValue, (newVal) => {
 </script>
 
 <template>
- <div class="relative">
- <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
- <input
- ref="inputRef"
- type="text"
- inputmode="numeric"
- :value="displayValue"
- @input="handleInput"
- :placeholder="placeholder"
- class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
- />
- </div>
+  <div class="relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
+    <input
+      ref="inputRef"
+      type="text"
+      inputmode="numeric"
+      :value="displayValue"
+      :placeholder="placeholder"
+      class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      @input="handleInput"
+    >
+  </div>
 </template>
