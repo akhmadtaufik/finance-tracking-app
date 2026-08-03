@@ -3,6 +3,12 @@ from typing import List, Optional
 from datetime import date
 from decimal import Decimal
 import asyncpg
+import io
+from fastapi.responses import StreamingResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 from ..core.database import get_db_conn
 from ..core.security import get_current_user
@@ -49,11 +55,15 @@ async def get_transactions(
         default=None, description="End date for range filter"
     ),
     limit: int = Query(
-        default=10,
+        default=20,
         le=100,
-        description="Max results (default: 10, ignored if date range)",
+        description="Max results per page",
     ),
     offset: int = Query(default=0, ge=0, description="Pagination offset"),
+    skip: Optional[int] = Query(default=None, ge=0, description="Alias for offset"),
+    wallet_id: Optional[int] = Query(default=None, description="Filter by wallet ID"),
+    category_id: Optional[int] = Query(default=None, description="Filter by category ID"),
+    search: Optional[str] = Query(default=None, description="Search description or category"),
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn),
 ):
@@ -63,13 +73,18 @@ async def get_transactions(
     if type and type.upper() in ["INCOME", "EXPENSE"]:
         trans_type = type.upper()
 
+    effective_offset = skip if skip is not None else offset
+
     transactions = await trans_repo.get_by_user(
         current_user["id"],
         limit=limit,
-        offset=offset,
+        offset=effective_offset,
         trans_type=trans_type,
         start_date=start_date,
         end_date=end_date,
+        wallet_id=wallet_id,
+        category_id=category_id,
+        search=search,
     )
     return transactions
 
@@ -93,6 +108,115 @@ async def get_description_suggestions(
     trans_repo = TransactionRepository(conn)
     return await trans_repo.get_distinct_descriptions(
         current_user["id"], category_id=category_id, search_term=q
+    )
+
+
+@router.get(
+    "/export/pdf",
+    summary="Export Transactions to PDF",
+    description="Generate a clean PDF statement of filtered transactions.",
+)
+async def export_transactions_pdf(
+    wallet_id: Optional[int] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    category_id: Optional[int] = Query(None),
+    search: Optional[str] = Query(None),
+    type: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+):
+    trans_repo = TransactionRepository(conn)
+    wallet_repo = WalletRepository(conn)
+
+    wallet_name = "All Wallets"
+    if wallet_id:
+        wallet = await wallet_repo.get_by_id(wallet_id, current_user["id"])
+        if wallet:
+            wallet_name = wallet["name"]
+
+    trans_type = None
+    if type and type.upper() in ["INCOME", "EXPENSE"]:
+        trans_type = type.upper()
+
+    transactions = await trans_repo.get_by_user(
+        current_user["id"],
+        limit=None,
+        offset=0,
+        trans_type=trans_type,
+        start_date=start_date,
+        end_date=end_date,
+        wallet_id=wallet_id,
+        category_id=category_id,
+        search=search,
+    )
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36,
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "DocTitle",
+        parent=styles["Heading1"],
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor("#212121"),
+        spaceAfter=4,
+    )
+    subtitle_style = ParagraphStyle(
+        "DocSubtitle",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor=colors.HexColor("#75758a"),
+        spaceAfter=16,
+    )
+
+    elements.append(Paragraph(f"Transaction Report - {wallet_name}", title_style))
+    date_label = f"Period: {start_date or 'Beginning'} to {end_date or 'Present'}"
+    elements.append(Paragraph(date_label, subtitle_style))
+
+    data = [["Date", "Category", "Description", "Type", "Amount"]]
+    for t in transactions:
+        amount_str = f"IDR {float(t['amount']):,.0f}"
+        data.append([
+            str(t["transaction_date"]),
+            t["category_name"] or "-",
+            t["description"] or "-",
+            t["type"],
+            amount_str,
+        ])
+
+    table = Table(data, colWidths=[75, 95, 210, 60, 100])
+    table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eeece7")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#212121")),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("ALIGN", (4, 0), (4, -1), "RIGHT"),
+            ("LINEBELOW", (0, 0), (-1, -1), 0.5, colors.HexColor("#d9d9dd")),
+        ])
+    )
+
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+
+    clean_filename = f"statement_{wallet_name.lower().replace(' ', '_')}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={clean_filename}"},
     )
 
 
