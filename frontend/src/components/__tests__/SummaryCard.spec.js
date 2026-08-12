@@ -26,6 +26,6 @@ describe('SummaryCard', () => {
     })
 
     const amount = wrapper.get('p.text-2xl')
-    expect(amount.classes()).toContain('text-red-600')
+    expect(amount.classes()).toContain('text-coral-soft')
   })
 })
