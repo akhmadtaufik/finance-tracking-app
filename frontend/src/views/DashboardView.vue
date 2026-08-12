@@ -1,11 +1,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useFinanceStore } from '../stores/finance'
 import EditTransactionModal from '../components/EditTransactionModal.vue'
 import WalletCard from '../components/WalletCard.vue'
 import CashFlowLineChart from '../components/charts/CashFlowLineChart.vue'
 
 const financeStore = useFinanceStore()
+const { summary, transactions, wallets, isLoadingTransactions, isLoadingWallets } = storeToRefs(financeStore)
 
 const showEditModal = ref(false)
 const editingTransaction = ref(null)
@@ -132,7 +134,7 @@ const getCategoryBadgeClass = (trans) => {
 
 const groupedTransactions = computed(() => {
  const groups = {}
- for (const trans of financeStore.transactions) {
+ for (const trans of transactions.value) {
  const dateKey = trans.transaction_date
  if (!groups[dateKey]) {
  groups[dateKey] = { transactions: [], dailyTotal: 0 }
@@ -149,7 +151,7 @@ const groupedTransactions = computed(() => {
 
 const topCategories = computed(() => {
   const catTotals = {}
-  for (const t of financeStore.transactions) {
+  for (const t of transactions.value) {
     if (t.type === 'EXPENSE' && !isTransferCategory(t.category_name)) {
       catTotals[t.category_name] = (catTotals[t.category_name] || 0) + parseFloat(t.amount)
     }
@@ -166,7 +168,7 @@ const chartEndDate = computed(() => isDefaultView.value ? getLocalToday() : filt
 const chartData = computed(() => {
   const result = []
   const dailyTotals = {}
-  financeStore.transactions.forEach(t => {
+  transactions.value.forEach(t => {
     if (isTransferCategory(t.category_name)) return
     const day = t.transaction_date
     if (!dailyTotals[day]) dailyTotals[day] = { INCOME: 0, EXPENSE: 0 }
@@ -195,7 +197,7 @@ const chartData = computed(() => {
           Total Balance
         </p>
         <p class="font-display text-5xl lg:text-7xl tracking-tighter text-on-dark whitespace-nowrap">
-          {{ formatCurrency(financeStore.summary.total_balance || 0) }}
+          {{ formatCurrency(summary.total_balance || 0) }}
         </p>
       </div>
       <div class="flex flex-col sm:flex-row gap-6 lg:gap-12 w-full lg:w-auto">
@@ -204,7 +206,7 @@ const chartData = computed(() => {
             Total Income
           </p>
           <p class="font-display text-2xl lg:text-3xl tracking-tight text-on-dark">
-            {{ formatCurrency(financeStore.summary.total_income || 0) }}
+            {{ formatCurrency(summary.total_income || 0) }}
           </p>
         </div>
         <div>
@@ -212,7 +214,7 @@ const chartData = computed(() => {
             Total Expense
           </p>
           <p class="font-display text-2xl lg:text-3xl tracking-tight text-on-dark">
-            {{ formatCurrency(financeStore.summary.total_expense || 0) }}
+            {{ formatCurrency(summary.total_expense || 0) }}
           </p>
         </div>
         <div>
@@ -220,7 +222,7 @@ const chartData = computed(() => {
             Net
           </p>
           <p class="font-display text-2xl lg:text-3xl tracking-tight text-on-dark">
-            {{ formatCurrency(financeStore.summary.net || 0) }}
+            {{ formatCurrency(summary.net || 0) }}
           </p>
         </div>
       </div>
@@ -269,7 +271,7 @@ const chartData = computed(() => {
           </div>
 
           <phantom-ui
-            :loading="financeStore.isLoadingTransactions"
+            :loading="isLoadingTransactions"
             animation="shimmer"
           >
             <div v-if="groupedTransactions.length > 0">
@@ -401,13 +403,13 @@ const chartData = computed(() => {
           </h2>
           <div class="flex flex-col gap-4">
             <WalletCard
-              v-for="wallet in financeStore.wallets"
+              v-for="wallet in wallets"
               :key="wallet.id"
               :wallet="wallet"
-              :is-loading="financeStore.isLoadingWallets"
+              :is-loading="isLoadingWallets"
             />
             <p
-              v-if="financeStore.wallets.length === 0"
+              v-if="wallets.length === 0"
               class="text-gray-500 py-4"
             >
               No wallets found
@@ -444,7 +446,7 @@ const chartData = computed(() => {
   <EditTransactionModal
     :show="showEditModal"
     :transaction="editingTransaction"
-    :wallets="financeStore.wallets"
+    :wallets="wallets"
     :categories="financeStore.categories"
     @close="showEditModal = false"
     @success="handleEditSuccess"
