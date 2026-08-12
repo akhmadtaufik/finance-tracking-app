@@ -1,10 +1,11 @@
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
- wallet: { type: Object, required: true },
- showDelete: { type: Boolean, default: false },
- isLoading: { type: Boolean, default: false }
+  wallet: { type: Object, required: true },
+  showDelete: { type: Boolean, default: false },
+  isLoading: { type: Boolean, default: false }
 })
 
 defineEmits(['delete'])
@@ -16,25 +17,24 @@ const navigateToDetail = () => {
 }
 
 const walletColors = {
- 'wallet': '#6366f1', 'cash': '#22c55e',
- 'bca': '#0066AE', 'bni': '#F05A22', 'bri': '#00529C', 'mandiri': '#003D79',
- 'cimb': '#7B0C0C', 'danamon': '#003D6A', 'permata': '#C8102E', 'btpn': '#F37021',
- 'bsi': '#00A651', 'btn': '#F7941D', 'mega': '#003478', 'ocbc': '#E60012',
- 'jago': '#00D4AA', 'jenius': '#00C4E8', 'blu': '#0066AE', 'seabank': '#00AED6',
- 'gopay': '#00AA13', 'ovo': '#4C3494', 'dana': '#108EE9', 'shopeepay': '#EE4D2D',
- 'linkaja': '#E31E25', 'other': '#6B7280'
+  'wallet': '#6366f1', 'cash': '#22c55e',
+  'bca': '#0066AE', 'bni': '#F05A22', 'bri': '#00529C', 'mandiri': '#003D79',
+  'cimb': '#7B0C0C', 'danamon': '#003D6A', 'permata': '#C8102E', 'btpn': '#F37021',
+  'bsi': '#00A651', 'btn': '#F7941D', 'mega': '#003478', 'ocbc': '#E60012',
+  'jago': '#00D4AA', 'jenius': '#00C4E8', 'blu': '#0066AE', 'seabank': '#00AED6',
+  'gopay': '#00AA13', 'ovo': '#4C3494', 'dana': '#108EE9', 'shopeepay': '#EE4D2D',
+  'linkaja': '#E31E25', 'other': '#6B7280'
 }
 
-const getWalletColor = (icon) => walletColors[icon] || walletColors['wallet']
-const getWalletInitials = (name) => name.substring(0, 3).toUpperCase()
-
-const formatCurrency = (value) => {
- return new Intl.NumberFormat('id-ID', {
- style: 'currency',
- currency: 'IDR',
- minimumFractionDigits: 0
- }).format(value)
-}
+const walletColor = computed(() => walletColors[props.wallet.icon] || walletColors['wallet'])
+const walletInitials = computed(() => (props.wallet.name || '').substring(0, 3).toUpperCase())
+const formattedBalance = computed(() => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(props.wallet.balance)
+})
 </script>
 
 <template>
@@ -45,9 +45,9 @@ const formatCurrency = (value) => {
     <div class="flex items-center justify-between mb-3">
       <div 
         class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs"
-        :style="{ backgroundColor: getWalletColor(wallet.icon) }"
+        :style="{ backgroundColor: walletColor }"
       >
-        {{ getWalletInitials(wallet.name) }}
+        {{ walletInitials }}
       </div>
       <button
         v-if="showDelete"
@@ -77,7 +77,7 @@ const formatCurrency = (value) => {
         {{ wallet.name }}
       </h3>
       <p class="text-ink font-display tracking-tight text-2xl">
-        {{ formatCurrency(wallet.balance) }}
+        {{ formattedBalance }}
       </p>
     </phantom-ui>
   </div>
