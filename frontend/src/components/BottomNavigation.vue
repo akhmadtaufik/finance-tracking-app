@@ -1,59 +1,64 @@
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
+const navItems = [
+  {
+    path: '/',
+    label: 'Home',
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />'
+  },
+  {
+    path: '/wallets',
+    label: 'Wallets',
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />'
+  },
+  {
+    path: '/scan-receipt',
+    label: 'Scan',
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />'
+  },
+  {
+    path: '/categories',
+    label: 'Menu',
+    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />'
+  }
+]
+
 const isActive = (path) => {
- if (path === "/") return route.path === "/";
- return route.path.startsWith(path);
+  if (path === "/") return route.path === "/";
+  return route.path.startsWith(path);
 }
+
+const computedNavItems = computed(() => {
+  return navItems.map(item => ({
+    ...item,
+    active: isActive(item.path)
+  }))
+})
 </script>
 
 <template>
   <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
     <div class="flex justify-around items-center h-16 px-2">
-      <!-- Dashboard -->
+      <!-- First two items -->
       <router-link
-        to="/"
+        v-for="item in computedNavItems.slice(0, 2)"
+        :key="item.path"
+        :to="item.path"
         class="flex flex-col items-center justify-center w-16 h-full space-y-1"
-        :class="isActive('/') ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
+        :class="item.active ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
       >
         <svg
           class="w-6 h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-          />
-        </svg>
-        <span class="text-[10px] font-medium">Home</span>
-      </router-link>
-
-      <!-- Wallets -->
-      <router-link
-        to="/wallets"
-        class="flex flex-col items-center justify-center w-16 h-full space-y-1"
-        :class="isActive('/wallets') ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
-      >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-          />
-        </svg>
-        <span class="text-[10px] font-medium">Wallets</span>
+          v-html="item.icon"
+        />
+        <span class="text-[10px] font-medium">{{ item.label }}</span>
       </router-link>
 
       <!-- FAB Add Transaction -->
@@ -78,54 +83,22 @@ const isActive = (path) => {
         </div>
       </router-link>
 
-      <!-- Scan -->
+      <!-- Last two items -->
       <router-link
-        to="/scan-receipt"
+        v-for="item in computedNavItems.slice(2, 4)"
+        :key="item.path"
+        :to="item.path"
         class="flex flex-col items-center justify-center w-16 h-full space-y-1"
-        :class="isActive('/scan-receipt') ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
+        :class="item.active ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
       >
         <svg
           class="w-6 h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-          />
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-        <span class="text-[10px] font-medium">Scan</span>
-      </router-link>
-
-      <!-- Categories (as Menu) -->
-      <router-link
-        to="/categories"
-        class="flex flex-col items-center justify-center w-16 h-full space-y-1"
-        :class="isActive('/categories') ? 'text-ink font-bold' : 'text-slate hover:text-ink'"
-      >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-        <span class="text-[10px] font-medium">Menu</span>
+          v-html="item.icon"
+        />
+        <span class="text-[10px] font-medium">{{ item.label }}</span>
       </router-link>
     </div>
   </div>
