@@ -38,7 +38,7 @@ describe('auth store', () => {
       expect.any(URLSearchParams),
       expect.objectContaining({ headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
     )
-    expect(localStorage.getItem('token')).toBe('token-123')
+    expect(authStore.token).toBe('token-123')
     expect(authStore.user.email).toBe('test@example.com')
   })
 })
