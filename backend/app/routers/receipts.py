@@ -3,6 +3,7 @@ Receipts Router - Receipt scanning endpoints using AI vision.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+import magic
 
 from ..core.security import get_current_user
 from ..services.ocr_service import ReceiptScanner, get_receipt_scanner
@@ -33,12 +34,16 @@ ALLOWED_MIME_TYPES = {
     
     **Error Codes:**
     - 400: Invalid file type
+    - 413: Payload too large (Max 5MB)
+    - 415: Unsupported Media Type (Invalid Magic Bytes)
     - 429: Daily AI quota exceeded (use manual input)
     - 500: AI processing failed
     """,
     responses={
         200: {"description": "Receipt scanned successfully"},
         400: {"description": "Invalid file type"},
+        413: {"description": "Payload Too Large"},
+        415: {"description": "Unsupported Media Type"},
         429: {"description": "Daily AI Quota Exceeded"},
         500: {"description": "AI Processing Failed"},
     },
@@ -57,7 +62,13 @@ async def scan_receipt(
     - Calculate total amount
     - Guess categories for each item
     """
-    # Validate file type
+    if file.size and file.size > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size exceeds the 5MB limit",
+        )
+
+    # Validate file type using extensions
     content_type = file.content_type or ""
     if content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -71,6 +82,14 @@ async def scan_receipt(
     if not image_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file uploaded"
+        )
+        
+    # Magic bytes validation
+    actual_mime = magic.from_buffer(image_bytes, mime=True)
+    if actual_mime not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported Media Type. Malicious file signature detected: {actual_mime}",
         )
 
     # Get the correct MIME type for Gemini
