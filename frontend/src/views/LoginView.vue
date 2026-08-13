@@ -19,7 +19,11 @@ const handleLogin = async () => {
  await authStore.login(email.value, password.value)
  router.push('/')
  } catch (err) {
+ if (err.response?.status === 429) {
+ error.value = 'Too many login attempts. Please try again later.'
+ } else {
  error.value = err.response?.data?.detail || 'Login failed'
+ }
  } finally {
  loading.value = false
  }

@@ -72,10 +72,20 @@ const triggerFileInput = () => {
 }
 
 const handleFileUpload = async (event) => {
- const file = event.target.files[0]
- if (!file) return
+  const file = event.target.files[0]
+  if (!file) return
 
- isLoading.value = true
+  // Pre-flight file size check (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    uiStore.showToast({
+      message: 'Ukuran file maksimal 5MB.',
+      type: 'error'
+    })
+    event.target.value = ''
+    return
+  }
+
+  isLoading.value = true
 
  const formData = new FormData()
  formData.append('file', file)
@@ -100,21 +110,31 @@ const handleFileUpload = async (event) => {
  } catch (error) {
  console.error('Scan failed', error)
 
- if (error.response && error.response.status === 429) {
- // 429 Quota Exceeded logic
- uiStore.showToast({
- message: 'Kuota Scan AI habis untuk hari ini. Silakan input manual.',
- type: 'warning', // Yellow/Warning color
- duration: 6000
- })
- // Optional: Redirect logic if desired, or let user retry/manual
- } else {
- uiStore.showToast({
- message:
- error.response?.data?.detail || 'Gagal memproses struk. Coba lagi atau input manual.',
- type: 'error'
- })
- }
+  if (error.response && error.response.status === 429) {
+  // 429 Quota Exceeded logic
+  uiStore.showToast({
+  message: 'Kuota Scan AI habis untuk hari ini. Silakan input manual.',
+  type: 'warning', // Yellow/Warning color
+  duration: 6000
+  })
+  // Optional: Redirect logic if desired, or let user retry/manual
+  } else if (error.response && error.response.status === 413) {
+  uiStore.showToast({
+  message: 'Ukuran file terlalu besar (Maksimal 5MB).',
+  type: 'error'
+  })
+  } else if (error.response && error.response.status === 415) {
+  uiStore.showToast({
+  message: 'Format file tidak didukung. Harap unggah gambar asli.',
+  type: 'error'
+  })
+  } else {
+  uiStore.showToast({
+  message:
+  error.response?.data?.detail || 'Gagal memproses struk. Coba lagi atau input manual.',
+  type: 'error'
+  })
+  }
  } finally {
  isLoading.value = false
  // Reset input
