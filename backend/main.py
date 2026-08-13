@@ -66,10 +66,8 @@ All endpoints (except `/auth/*`) require a valid JWT token in the `Authorization
 )
 
 app.state.limiter = limiter
-if settings.RATE_LIMIT_ENABLED:
-    # Middleware (order matters: first added = outermost)
-    app.add_middleware(SlowAPIMiddleware)
-else:
+app.add_middleware(SlowAPIMiddleware)
+if not settings.RATE_LIMIT_ENABLED:
     limiter.enabled = False
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
@@ -88,8 +86,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    # Basic CSP, allowing data: and external links if necessary, but strictly self by default
-    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000"
+    # Basic CSP, strict self by default. Allow data: and https: for images.
+    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
     return response
 
 # Exception Handlers
