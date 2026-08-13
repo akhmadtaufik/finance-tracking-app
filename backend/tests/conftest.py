@@ -24,7 +24,8 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 import sys
 if "backend.app.core.config" in sys.modules:
     sys.modules["backend.app.core.config"].settings.DATABASE_URL = TEST_DATABASE_URL
-os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+    sys.modules["backend.app.core.config"].settings.RATE_LIMIT_ENABLED = True
+os.environ.setdefault("RATE_LIMIT_ENABLED", "true")
 TEST_USER_PASSWORD = os.getenv("TEST_PASSWORD")
 
 
