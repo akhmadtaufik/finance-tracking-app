@@ -331,6 +331,38 @@ docker-compose build backend
 
 ---
 
+## 💾 Database Backup & Synchronization
+
+FinanceTracker includes a powerful built-in CLI utility to manage database backups, DR (Disaster Recovery), and bidirectional synchronization between the Docker container and a native Host PostgreSQL instance.
+
+### Setup
+The utility script (`scripts/db-sync.sh`) reads credentials securely from your `.env` file. Ensure you have the host configuration added to your `.env`:
+
+```env
+HOST_DB_HOST=localhost
+HOST_DB_PORT=5432
+```
+
+### CLI Commands
+Run the script from the root directory:
+
+| Command | Description |
+|---------|-------------|
+| `./scripts/db-sync.sh status` | Monitor connection status of both Docker & Host databases. |
+| `./scripts/db-sync.sh backup` | Create a compressed snapshot (`.sql.gz`) in `/backups`. |
+| `./scripts/db-sync.sh sync-to-host` | Overwrite Host DB with Docker DB data. |
+| `./scripts/db-sync.sh sync-to-docker`| Overwrite Docker DB with Host DB data. |
+| `./scripts/db-sync.sh restore <file>`| Restore Docker DB from a `.sql.gz` snapshot file. |
+
+### Automated Backups (Cronjob)
+To automatically backup and sync the database every day at 11:00 PM, and automatically prune backups older than 7 days, add this to your crontab (`crontab -e`):
+
+```cron
+0 23 * * * /path/to/your/project/scripts/db-sync.sh auto-sync >> /path/to/your/project/backups/cron.log 2>&1
+```
+
+---
+
 ## 🔌 API Examples
 
 Base URL: `http://localhost:8000`
