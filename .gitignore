@@ -88,3 +88,4 @@ coverage/
 .agents/
 DESIGN.md
 docker-data/
+backups/
