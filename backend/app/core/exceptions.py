@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import asyncpg
 
+from .logging_config import request_id_ctx
+
 logger = logging.getLogger("fintrack.exceptions")
 
 
@@ -20,11 +22,25 @@ class AppException(Exception):
 # --- Exception Handlers ---
 
 async def app_exception_handler(request: Request, exc: AppException):
-    """Handle custom application exceptions."""
-    logger.warning(f"AppException: {exc.code} - {exc.message}")
+    """Handle custom application exceptions with correlation ID."""
+    req_id = request_id_ctx.get() if request_id_ctx.get() != "-" else getattr(request.state, "request_id", None)
+    logger.warning(
+        f"AppException: {exc.code} - {exc.message}",
+        extra={"event": "app_exception", "code": exc.code, "request_id": req_id}
+    )
+    content = {"detail": exc.message, "code": exc.code}
+    if hasattr(exc, "retryable"):
+        content["retryable"] = exc.retryable
+    if hasattr(exc, "action_hint") and exc.action_hint is not None:
+        content["action_hint"] = exc.action_hint
+    if req_id:
+        content["request_id"] = req_id
+
+    headers = {"X-Request-ID": req_id} if req_id else {}
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.message, "code": exc.code}
+        content=content,
+        headers=headers,
     )
 
 

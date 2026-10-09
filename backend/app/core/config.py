@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     GOOGLE_API_KEY: str
 
+    # AI Vision OCR Configuration
+    GEMINI_PRIMARY_MODEL: str = "gemini-3.8-flash"
+    GEMINI_FALLBACK_MODEL: str = "gemini-3.6-flash"
+    OCR_TIMEOUT_SECONDS: int = 35
+    OCR_MAX_IMAGE_DIMENSION: int = 1200
+    OCR_IMAGE_QUALITY: int = 85
+
     # Mail settings
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
