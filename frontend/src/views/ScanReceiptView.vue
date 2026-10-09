@@ -1,12 +1,28 @@
 <script setup>
 import { ref, computed, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { Camera, Upload, Trash2, Plus, Check, AlertCircle, ArrowLeft } from 'lucide-vue-next'
+import {
+  Camera,
+  Upload,
+  Trash2,
+  Plus,
+  Check,
+  AlertCircle,
+  ArrowLeft,
+  AlertTriangle,
+  RefreshCw,
+  Copy,
+  CheckCircle2,
+  FileText,
+  X
+} from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import WalletSelector from '@/components/inputs/WalletSelector.vue'
 import CategorySelector from '@/components/inputs/CategorySelector.vue'
 import CurrencyInput from '@/components/CurrencyInput.vue'
 import api from '@/api'
+import logger, { getRequestId } from '@/services/logger'
+import { compressReceiptImage } from '@/utils/imageCompressor'
 
 // Store & Router
 const uiStore = useUIStore()
@@ -15,11 +31,30 @@ const router = useRouter()
 // State
 const step = ref('upload') // 'upload' | 'review'
 const isLoading = ref(false)
+const loadingProgressText = ref('Sedang Menganalisis Struk...')
+let loadingInterval = null
+const abortController = ref(null)
+
+const cancelScan = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+  }
+  isLoading.value = false
+  if (loadingInterval) {
+    clearInterval(loadingInterval)
+    loadingInterval = null
+  }
+}
 const receiptDate = ref(new Date().toISOString().split('T')[0])
 const selectedWalletId = ref(null)
 const scannedItems = ref([])
 const wallets = ref([])
 const categories = ref([])
+
+// Error State & Diagnostics
+const scanError = ref(null)
+const lastUploadedFile = ref(null)
+const copiedRequestId = ref(false)
 
 // Editing State for Category Modal
 const showCategoryModal = ref(false)
@@ -71,75 +106,190 @@ const triggerFileInput = () => {
  document.getElementById('receipt-upload').click()
 }
 
+const getErrorTitle = (code) => {
+  switch (code) {
+    case 'AI_QUOTA_EXCEEDED':
+      return 'Kuota Scan AI Habis'
+    case 'AI_IMAGE_UNREADABLE':
+      return 'Foto Struk Tidak Terbaca'
+    case 'FILE_TOO_LARGE':
+      return 'Ukuran File Terlalu Besar'
+    case 'INVALID_FILE_TYPE':
+    case 'INVALID_MAGIC_BYTES':
+      return 'Format File Tidak Didukung'
+    case 'AI_TIMEOUT':
+      return 'Waktu Pemrosesan Habis'
+    case 'AI_SERVICE_UNAVAILABLE':
+      return 'Layanan AI Sedang Sibuk'
+    case 'EMPTY_FILE':
+      return 'File Struk Kosong'
+    default:
+      return 'Gagal Memindai Struk'
+  }
+}
+
+const copyRequestId = async () => {
+  if (!scanError.value?.requestId) return
+  try {
+    await navigator.clipboard.writeText(scanError.value.requestId)
+    copiedRequestId.value = true
+    uiStore.showToast({
+      message: 'ID Masalah berhasil disalin ke clipboard',
+      type: 'success',
+      duration: 3000
+    })
+    setTimeout(() => {
+      copiedRequestId.value = false
+    }, 3000)
+  } catch (err) {
+    logger.captureError(err, { context: 'copy_request_id' })
+  }
+}
+
 const handleFileUpload = async (event) => {
-  const file = event.target.files[0]
+  const file = event?.target?.files?.[0] || lastUploadedFile.value
   if (!file) return
+
+  lastUploadedFile.value = file
+  scanError.value = null
 
   // Pre-flight file size check (5MB)
   if (file.size > 5 * 1024 * 1024) {
-    uiStore.showToast({
-      message: 'Ukuran file maksimal 5MB.',
-      type: 'error'
-    })
-    event.target.value = ''
+    const errorData = {
+      code: 'FILE_TOO_LARGE',
+      title: 'Ukuran File Terlalu Besar',
+      detail: 'Ukuran file struk maksimal 5MB. Silakan kompres atau ambil foto dengan resolusi standar.',
+      requestId: getRequestId() || '-',
+      retryable: false,
+      actionHint: 'retake_photo'
+    }
+    scanError.value = errorData
+    logger.warn('Client-side rejected file: too large', { fileSize: file.size })
+    if (event?.target) event.target.value = ''
     return
   }
 
   isLoading.value = true
+  loadingProgressText.value = 'Mengompresi gambar untuk menghemat token...'
 
- const formData = new FormData()
- formData.append('file', file)
+  const startTime = Date.now()
+  if (loadingInterval) clearInterval(loadingInterval)
+  loadingInterval = setInterval(() => {
+    const elapsed = Math.round((Date.now() - startTime) / 1000)
+    if (elapsed < 8) {
+      loadingProgressText.value = 'Mengunggah & membaca teks struk...'
+    } else if (elapsed < 20) {
+      loadingProgressText.value = 'Sedang menganalisis item dan kategori belanja...'
+    } else if (elapsed < 35) {
+      loadingProgressText.value = 'Memproses struk dengan AI, mohon tunggu sebentar...'
+    } else {
+      loadingProgressText.value = 'Hampir selesai, memvalidasi hasil ekstraksi...'
+    }
+  }, 2000)
 
- try {
- const { data } = await api.post('/receipts/scan', formData, {
-   headers: { 'Content-Type': 'multipart/form-data' }
- })
+  try {
+    // Client-side in-memory compression (pure RAM)
+    const compressedFile = await compressReceiptImage(file, 1200, 0.85)
 
- // Success handling
- if (data.date) receiptDate.value = data.date
+    abortController.value = new AbortController()
+    const formData = new FormData()
+    formData.append('file', compressedFile)
 
- // Map items to our structure
- scannedItems.value = data.items.map((item, index) => ({
- id: Date.now() + index, // Temp ID for v-for key
- name: item.name,
- amount: item.price,
- category_id: guessCategoryId(item.category_guess)
- }))
+    const { data } = await api.post('/receipts/scan', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      skipToast: true,
+      signal: abortController.value.signal
+    })
 
- step.value = 'review'
- } catch (error) {
- console.error('Scan failed', error)
+    // Success handling
+    if (data.date) receiptDate.value = data.date
 
-  if (error.response && error.response.status === 429) {
-  // 429 Quota Exceeded logic
-  uiStore.showToast({
-  message: 'Kuota Scan AI habis untuk hari ini. Silakan input manual.',
-  type: 'warning', // Yellow/Warning color
-  duration: 6000
-  })
-  // Optional: Redirect logic if desired, or let user retry/manual
-  } else if (error.response && error.response.status === 413) {
-  uiStore.showToast({
-  message: 'Ukuran file terlalu besar (Maksimal 5MB).',
-  type: 'error'
-  })
-  } else if (error.response && error.response.status === 415) {
-  uiStore.showToast({
-  message: 'Format file tidak didukung. Harap unggah gambar asli.',
-  type: 'error'
-  })
-  } else {
-  uiStore.showToast({
-  message:
-  error.response?.data?.detail || 'Gagal memproses struk. Coba lagi atau input manual.',
-  type: 'error'
-  })
+    // Map items to our structure
+    scannedItems.value = (data.items || []).map((item, index) => ({
+      id: Date.now() + index, // Temp ID for v-for key
+      name: item.name,
+      amount: item.price,
+      category_id: guessCategoryId(item.category_guess)
+    }))
+
+    scanError.value = null
+    step.value = 'review'
+  } catch (error) {
+    // Ignore explicit user cancellation
+    if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+      logger.info('Receipt scan aborted by user')
+      return
+    }
+
+    console.error('Scan failed', error)
+    const errData = error.response?.data || {}
+    const statusCode = error.response?.status
+    const reqId =
+      errData.request_id ||
+      error.response?.headers?.['x-request-id'] ||
+      getRequestId() ||
+      '-'
+
+    const code =
+      errData.code ||
+      (statusCode === 429
+        ? 'AI_QUOTA_EXCEEDED'
+        : statusCode === 413
+        ? 'FILE_TOO_LARGE'
+        : statusCode === 415
+        ? 'INVALID_MAGIC_BYTES'
+        : statusCode === 422
+        ? 'AI_IMAGE_UNREADABLE'
+        : statusCode === 504
+        ? 'AI_TIMEOUT'
+        : statusCode === 503
+        ? 'AI_SERVICE_UNAVAILABLE'
+        : 'SCAN_FAILED')
+
+    const detail =
+      errData.detail ||
+      error.message ||
+      'Gagal memproses struk. Silakan coba lagi atau gunakan input manual.'
+    const retryable = errData.retryable ?? (statusCode === 504 || statusCode === 503)
+    const actionHint =
+      errData.action_hint || (code === 'AI_QUOTA_EXCEEDED' ? 'manual_input' : 'retake_photo')
+
+    scanError.value = {
+      code,
+      title: getErrorTitle(code),
+      detail,
+      requestId: reqId,
+      retryable,
+      actionHint
+    }
+
+    // Synchronize to frontend logger for backend trace visibility
+    logger.error(`Receipt scan failed: ${code} - ${detail}`, {
+      code,
+      status: statusCode,
+      requestId: reqId,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      durationMs: Date.now() - startTime,
+      detail
+    })
+  } finally {
+    if (loadingInterval) {
+      clearInterval(loadingInterval)
+      loadingInterval = null
+    }
+    isLoading.value = false
+    if (event?.target) event.target.value = ''
   }
- } finally {
- isLoading.value = false
- // Reset input
- event.target.value = ''
- }
+}
+
+const retryScan = () => {
+  if (lastUploadedFile.value) {
+    handleFileUpload()
+  } else {
+    triggerFileInput()
+  }
 }
 
 const guessCategoryId = (guess) => {
@@ -254,12 +404,23 @@ const saveTransactions = async () => {
     <!-- Loading Overlay -->
     <div
       v-if="isLoading"
-      class="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center"
+      class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center"
     >
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4" />
-      <p class="text-gray-600 font-medium animate-pulse">
-        {{ step === 'upload' ? 'Sedang Menganalisis Struk...' : 'Menyimpan Transaksi...' }}
+      <p class="text-gray-800 font-semibold text-lg mb-1 animate-pulse">
+        {{ step === 'upload' ? loadingProgressText : 'Menyimpan Transaksi...' }}
       </p>
+      <p v-if="step === 'upload'" class="text-xs text-gray-500 mb-6 max-w-sm">
+        Foto diproses sementara di memori tanpa disimpan ke disk server.
+      </p>
+      <button
+        v-if="step === 'upload'"
+        type="button"
+        class="px-5 py-2.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium border border-gray-200"
+        @click="cancelScan"
+      >
+        Batalkan Pemindaian
+      </button>
     </div>
 
     <!-- STEP 1: UPLOAD -->
@@ -293,7 +454,94 @@ const saveTransactions = async () => {
         >
       </div>
 
-      <div class="bg-blue-50 p-4 rounded-xl flex items-start gap-3 text-sm text-blue-700">
+      <!-- ERROR FEEDBACK CARD -->
+      <div
+        v-if="scanError"
+        class="border border-red-200 bg-red-50/80 rounded-2xl p-5 flex flex-col gap-4 transition-all duration-300 shadow-sm"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <div class="p-2.5 bg-red-100 text-red-600 rounded-xl shrink-0 mt-0.5">
+              <AlertTriangle class="w-6 h-6" />
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base">
+                {{ scanError.title }}
+              </h3>
+              <p class="text-sm text-gray-700 mt-1 leading-relaxed">
+                {{ scanError.detail }}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-red-100/50 transition-colors"
+            title="Tutup pesan error"
+            @click="scanError = null"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <!-- Tracking info bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-red-200/60 text-xs text-gray-600">
+          <div class="flex items-center gap-2">
+            <span class="bg-red-100 text-red-800 font-mono px-2 py-0.5 rounded font-semibold text-[11px]">
+              {{ scanError.code }}
+            </span>
+            <span v-if="scanError.requestId && scanError.requestId !== '-'" class="font-mono text-gray-500 text-[11px]">
+              ID: {{ scanError.requestId }}
+            </span>
+          </div>
+          <button
+            v-if="scanError.requestId && scanError.requestId !== '-'"
+            type="button"
+            class="inline-flex items-center gap-1 font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            @click="copyRequestId"
+          >
+            <CheckCircle2 v-if="copiedRequestId" class="w-3.5 h-3.5 text-green-600" />
+            <Copy v-else class="w-3.5 h-3.5" />
+            <span>{{ copiedRequestId ? 'Tersalin!' : 'Salin ID Masalah' }}</span>
+          </button>
+        </div>
+
+        <!-- Contextual Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2.5 pt-1">
+          <button
+            type="button"
+            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            @click="triggerFileInput"
+          >
+            <Camera class="w-4 h-4" />
+            <span>Ambil Foto Ulang</span>
+          </button>
+
+          <button
+            type="button"
+            class="px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            @click="router.push('/transactions/add')"
+          >
+            <FileText class="w-4 h-4 text-gray-500" />
+            <span>Input Transaksi Manual</span>
+          </button>
+
+          <button
+            v-if="scanError.retryable && lastUploadedFile"
+            type="button"
+            class="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+            @click="retryScan"
+          >
+            <RefreshCw class="w-4 h-4" />
+            <span>Coba Lagi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Informative hint when no error -->
+      <div
+        v-else
+        class="bg-blue-50 p-4 rounded-xl flex items-start gap-3 text-sm text-blue-700"
+      >
         <AlertCircle class="w-5 h-5 shrink-0 mt-0.5" />
         <p>
           Pastikan foto struk terlihat jelas, terang, dan menampilkan detail item serta harga. AI

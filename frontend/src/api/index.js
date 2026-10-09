@@ -49,6 +49,10 @@ const extractErrorMessage = (error) => {
 }
 
 const showErrorToast = (error) => {
+  // Allow skipping global toast when component handles it specifically
+  if (error.config?.skipToast) {
+    return
+  }
   const status = error.response?.status
   if (status === 400 || status >= 500) {
     uiStore.showToast({ message: extractErrorMessage(error), type: 'error' })
@@ -90,6 +94,14 @@ api.interceptors.response.use(
   async (error) => {
     uiStore.stopLoading()
     const originalRequest = error.config
+
+    // Capture request ID from response headers or data
+    const requestId =
+      error.response?.headers?.['x-request-id'] ||
+      error.response?.data?.request_id
+    if (requestId) {
+      setRequestId(requestId)
+    }
     
     // Jika error 401 dan belum pernah retry
     if (error.response?.status === 401 && !originalRequest._retry) {
